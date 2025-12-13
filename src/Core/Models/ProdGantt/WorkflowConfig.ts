@@ -1,7 +1,7 @@
-import type { WorkflowStepDto } from "./WorkflowStep";
+import type { WorkflowStep } from "./WorkflowStep";
 
-export interface WorkflowConfigDto {
+export interface WorkflowConfig {
   Id: string;
   Name: string;
-  Steps: WorkflowStepDto[];
+  Steps: WorkflowStep[];
 }
