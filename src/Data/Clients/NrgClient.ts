@@ -5,18 +5,18 @@ import type {
 import type { TenantDto } from "@/Core/Models/nrg-dtos/TenantDto";
 import type {
   LaborItemDto,
-  LaborItemsResponseDto,
+  LaborItemDtos,
 } from "../../Core/Models/nrg-dtos/LaborItemDto";
 import type { MesLaborGridResponseDto } from "../../Core/Models/nrg-dtos/MesLaborGrid";
 // import type { DateManagementByMonthDto } from "../../Core/Models/nrg-dtos/DateManagementByMonth";
 import type { WorkflowsDto } from "../../Core/Models/nrg-dtos/WorkflowDto";
 import type {
-  WorkOrdersChunckedApiResponseDto,
+  WorkOrdersDtosChunked,
   WorkOrderDto,
 } from "../../Core/Models/nrg-dtos/WorkOrderDto";
 import type { INrgClient } from "./INrgClient";
 // import { ResponseState } from "../ResponseState";
-import type { OperationModelResultModel } from "@/Core/Models/nrg-dtos/OperationModelResultModel";
+import type { OperationDtos } from "@/Core/Models/nrg-dtos/OperationDto";
 import type { ProjectModelResultModel } from "@/Core/Models/nrg-dtos/ProjectModelResultModel";
 import type { ProjectWorkOrderResultModel } from "@/Core/Models/nrg-dtos/ProjectWorkOrderResultModel";
 
@@ -95,7 +95,7 @@ export class NrgClient implements INrgClient {
     const res = await this.get(this._urlGetLaborItems);
 
     if (res.ok) {
-      const data = (await res.json()) as LaborItemsResponseDto;
+      const data = (await res.json()) as LaborItemDtos;
       const flatItems: LaborItemDto[] = data.Items.flat();
 
       // console.log("GetLaborItems()");
@@ -114,7 +114,7 @@ export class NrgClient implements INrgClient {
     console.dir(res);
 
     if (res.ok) {
-      const data = (await res.json()) as WorkOrdersChunckedApiResponseDto;
+      const data = (await res.json()) as WorkOrdersDtosChunked;
       console.dir(data);
       const flatItems: WorkOrderDto[] = data.Items.flat();
       console.dir(flatItems);
@@ -267,10 +267,10 @@ export class NrgClient implements INrgClient {
     }
   }
 
-  async GetOperations(): Promise<OperationModelResultModel> {
+  async GetOperations(): Promise<OperationDtos> {
     const res = await this.get("/api/operations");
     if (res.ok) {
-      return (await res.json()) as OperationModelResultModel;
+      return (await res.json()) as OperationDtos;
     } else {
       let errorMsg = res.statusText;
       try {

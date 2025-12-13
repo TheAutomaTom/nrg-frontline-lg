@@ -1,4 +1,6 @@
-export interface WorkOrdersChunckedApiResponseDto {
+import type { PersonRefDto } from "./PersonRefDto";
+
+export interface WorkOrdersDtosChunked {
   Items: WorkOrderDto[][];
 }
 
@@ -28,15 +30,15 @@ export interface WorkOrderDto {
   StepType: string;
   // InvoiceStatus: string
   WorkflowName?: string;
-  Owner?: Person;
-  Assignees?: Person[];
+  Owner?: PersonRefDto;
+  Assignees?: PersonRefDto[];
   // Drafters?: Drafter[]
   // Engineers?: Engineer[]
   // Estimators?: Estimator[]
   // SalesPersons?: SalesPerson[]
   // Coordinators?: Coordinator[]
   // Installers?: Installer[]
-  ProjectManager?: Person;
+  ProjectManager?: PersonRefDto;
   // PlannedStartDate: string
   // ActualStartDate?: string
   // PlannedCriticalDate: string
@@ -95,11 +97,6 @@ export interface WorkOrderDto {
 //   Id: string
 //   FullName: string
 // }
-
-export interface Person {
-  Id: string;
-  FullName: string;
-}
 
 // export interface EstimatedLaborCost {
 //   Value: number

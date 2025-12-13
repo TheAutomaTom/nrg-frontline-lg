@@ -1,15 +1,6 @@
+import type { PersonRefDto } from "./PersonRefDto";
+
 export type CurrencyCode = "USD" | string;
-
-// export interface MoneyValueDto {
-//   Value: number;
-//   OriginalValue: number;
-//   CurrencyCode: CurrencyCode;
-// }
-
-export interface PersonRefDto {
-  Id: string;
-  FullName: string;
-}
 
 export type DurationString = string; // e.g. "3.02:52:22" (days.hours:minutes:seconds) or "HH:MM:SS"
 

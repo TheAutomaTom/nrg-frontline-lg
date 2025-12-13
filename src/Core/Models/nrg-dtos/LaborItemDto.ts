@@ -1,11 +1,6 @@
-// export type CurrencyCode = "USD" | string;
-
-// export interface MoneyValueDto {
-//   Value: number;
-//   OriginalValue: number;
-//   CurrencyCode: CurrencyCode;
-// }
-
+export interface LaborItemDtos {
+  Items: LaborItemDto[];
+}
 export interface LaborItemDto {
   LaborId: string;
   Name: string;
@@ -22,9 +17,5 @@ export interface LaborItemDto {
   Type: string | null;
   WorkOrderType: string | null;
   // Burdens: unknown[]; // placeholder for burden items if needed later
-  // HideInKiosk: boolean;
-}
-
-export interface LaborItemsResponseDto {
-  Items: LaborItemDto[];
+  HideInKiosk: boolean;
 }
