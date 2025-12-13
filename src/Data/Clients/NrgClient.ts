@@ -1,24 +1,22 @@
-import type {
-  ProjectDto,
-  ProjectsChunckedApiResponseDto,
-} from "@/Core/Models/nrg-dtos/ProjectDto";
 import type { TenantDto } from "@/Core/Models/nrg-dtos/TenantDto";
 import type {
   LaborItemDto,
   LaborItemDtos,
-} from "../../Core/Models/nrg-dtos/LaborItemDto";
-import type { MesLaborGridResponseDto } from "../../Core/Models/nrg-dtos/MesLaborGrid";
+} from "@/Core/Models/nrg-dtos/LaborItemDto";
+import type { MesLaborGridResponseDto } from "@/Core/Models/nrg-dtos/MesLaborGrid";
 // import type { DateManagementByMonthDto } from "../../Core/Models/nrg-dtos/DateManagementByMonth";
-import type { WorkflowsDto } from "../../Core/Models/nrg-dtos/WorkflowDto";
+import type { WorkflowsDto } from "@/Core/Models/nrg-dtos/WorkflowDto";
 import type {
   WorkOrdersDtosChunked,
   WorkOrderDto,
-} from "../../Core/Models/nrg-dtos/WorkOrderDto";
+} from "@/Core/Models/nrg-dtos/WorkOrderDto";
 import type { INrgClient } from "./INrgClient";
 // import { ResponseState } from "../ResponseState";
 import type { OperationDtos } from "@/Core/Models/nrg-dtos/OperationDto";
-import type { ProjectModelResultModel } from "@/Core/Models/nrg-dtos/ProjectModelResultModel";
-import type { ProjectWorkOrderResultModel } from "@/Core/Models/nrg-dtos/ProjectWorkOrderResultModel";
+import type {
+  ProjectDto,
+  ProjectDtosChunked,
+} from "@/Core/Models/nrg-dtos/Project/ProjectDto";
 
 export class NrgClient implements INrgClient {
   _apiUrlBase: string;
@@ -54,6 +52,12 @@ export class NrgClient implements INrgClient {
       const base = ensureLeading(norm(baseEnv || "/"));
       this._apiUrlBase = norm(base) + proxyTag;
     }
+  }
+  GetLaborKanbanGridItems(): Promise<MesLaborGridResponseDto> {
+    throw new Error("Method not implemented.");
+  }
+  importEngineeringSyncDataRaw(json: string): Promise<any> {
+    throw new Error("Method not implemented.");
   }
 
   SetKey(pw: string): boolean {
@@ -91,65 +95,6 @@ export class NrgClient implements INrgClient {
   }
   //===================================================================================//
 
-  async GetLaborItems(): Promise<LaborItemDto[]> {
-    const res = await this.get(this._urlGetLaborItems);
-
-    if (res.ok) {
-      const data = (await res.json()) as LaborItemDtos;
-      const flatItems: LaborItemDto[] = data.Items.flat();
-
-      // console.log("GetLaborItems()");
-      // console.dir(flatItems as LaborItemDto[]);
-
-      return flatItems as LaborItemDto[];
-    } else {
-      throw Error(res.statusText);
-    }
-  }
-
-  async GetWorkOrders(key: string): Promise<WorkOrderDto[]> {
-    this.key = key;
-    const res = await this.get(this._urlGetWorkOrders);
-    console.warn(`==> NrgClient.GetWorkOrders`);
-    console.dir(res);
-
-    if (res.ok) {
-      const data = (await res.json()) as WorkOrdersDtosChunked;
-      console.dir(data);
-      const flatItems: WorkOrderDto[] = data.Items.flat();
-      console.dir(flatItems);
-      return flatItems as WorkOrderDto[];
-    } else {
-      throw Error(res.statusText);
-    }
-  }
-
-  async GetLegacyProjects(key: string): Promise<ProjectDto[]> {
-    this.key = key;
-    const res = await this.get(this._urlGetProjects);
-    console.warn(`==> NrgClient.GetProjects`);
-    console.dir(res);
-
-    if (res.ok) {
-      const data = (await res.json()) as ProjectsChunckedApiResponseDto;
-      console.dir(data);
-
-      const flatItems: ProjectDto[] = data.Items.flat();
-      return flatItems as ProjectDto[];
-    } else {
-      throw Error(res.statusText);
-    }
-  }
-
-  async GetProjects(): Promise<ProjectModelResultModel> {
-    const res = await this.get(this._urlGetProjects);
-    if (res.ok) {
-      return (await res.json()) as ProjectModelResultModel;
-    } else {
-      throw Error(res.statusText);
-    }
-  }
-
   async GetTenantInfo(key: string): Promise<TenantDto> {
     this.key = key;
     const res = await this.get(this._urlGetTenantInfo);
@@ -181,89 +126,19 @@ export class NrgClient implements INrgClient {
     }
   }
 
-  async GetLaborKanbanGridItems(): Promise<MesLaborGridResponseDto> {
-    const res = await this.get(this._urlGetLaborKanbanGridItems);
-    console.warn("==> NrgClient.GetLaborKanbanGridItems");
-    console.dir(res);
+  async GetLaborItems(): Promise<LaborItemDto[]> {
+    const res = await this.get(this._urlGetLaborItems);
+
     if (res.ok) {
-      const data = (await res.json()) as MesLaborGridResponseDto;
-      console.dir(data);
-      return data;
+      const data = (await res.json()) as LaborItemDtos;
+      const flatItems: LaborItemDto[] = data.Items.flat();
+
+      // console.log("GetLaborItems()");
+      // console.dir(flatItems as LaborItemDto[]);
+
+      return flatItems as LaborItemDto[];
     } else {
       throw Error(res.statusText);
-    }
-  }
-
-  // async GetDateManagementByMonth(year: number, month: number): Promise<DateManagementByMonthDto> {
-  //   const url = `/api/dateManagement/${year}/${month}`;
-  //   const res = await this.get(url);
-  //   console.warn(`==> NrgClient.GetDateManagementByMonth(${year}, ${month})`);
-  //   console.dir(res);
-  //   if (res.ok) {
-  //     const data = (await res.json()) as DateManagementByMonthDto;
-  //     console.dir(data);
-  //     return data;
-  //   } else {
-  //     throw Error(res.statusText);
-  //   }
-  // }
-
-  async GetWorkflows(): Promise<WorkflowsDto> {
-    const res = await this.get(this._urlGetWorkflows);
-    console.warn("==> NrgClient.GetWorkflows");
-    console.dir(res);
-    if (res.ok) {
-      const data = (await res.json()) as WorkflowsDto;
-      console.dir(data);
-      return data;
-    } else {
-      throw Error(res.statusText);
-    }
-  }
-
-  async importEngineeringSyncData(
-    payload: import("@/Core/Models/nrg-dtos/ImportEngineeringSyncDataModel").ImportEngineeringSyncDataModel,
-  ): Promise<
-    import("@/Core/Models/nrg-dtos/ImportEngineeringSyncDataModel").ResultTypeExceptionDetails
-  > {
-    const url = "/api/engineeringsync/importjson";
-    const res = await this.post(url, JSON.stringify(payload));
-    if (res.ok) {
-      return (await res.json()) as import("@/Core/Models/nrg-dtos/ImportEngineeringSyncDataModel").ResultTypeExceptionDetails;
-    } else {
-      // Parse error response body to get Messages array
-      try {
-        const errorBody = await res.json();
-        // If the error body has the expected structure, return it so the caller can handle Messages
-        if (errorBody && (errorBody.Messages || errorBody.OutcomeType)) {
-          return errorBody as import("@/Core/Models/nrg-dtos/ImportEngineeringSyncDataModel").ResultTypeExceptionDetails;
-        }
-        // Otherwise throw with parsed message
-        throw new Error(errorBody?.message || res.statusText);
-      } catch (parseErr) {
-        // If JSON parsing fails, throw with statusText
-        if (parseErr instanceof Error && parseErr.message !== res.statusText) {
-          throw parseErr;
-        }
-        throw new Error(res.statusText);
-      }
-    }
-  }
-
-  async importEngineeringSyncDataRaw(json: string): Promise<any> {
-    const url = "/api/engineeringsync/importjson";
-    const res = await this.post(url, json);
-    if (res.ok) {
-      return await res.json();
-    } else {
-      let errorMsg = res.statusText;
-      try {
-        const errJson = await res.json();
-        errorMsg = errJson?.message || errorMsg;
-      } catch {
-        // Ignore if parsing error body fails
-      }
-      throw new Error(errorMsg);
     }
   }
 
@@ -283,12 +158,63 @@ export class NrgClient implements INrgClient {
     }
   }
 
-  async GetProjectWorkOrders(
+  async GetWorkflows(): Promise<WorkflowsDto> {
+    const res = await this.get(this._urlGetWorkflows);
+    console.warn("==> NrgClient.GetWorkflows");
+    console.dir(res);
+    if (res.ok) {
+      const data = (await res.json()) as WorkflowsDto;
+      console.dir(data);
+      return data;
+    } else {
+      throw Error(res.statusText);
+    }
+  }
+
+  async GetProjects(key: string): Promise<ProjectDto[]> {
+    this.key = key;
+    const res = await this.get(this._urlGetProjects);
+    console.warn(`==> NrgClient.GetProjects`);
+    console.dir(res);
+
+    if (res.ok) {
+      const data = (await res.json()) as ProjectDtosChunked;
+      console.dir(data);
+      const flatItems: ProjectDto[] = data.Items.flat();
+      console.dir(flatItems);
+      return flatItems as ProjectDto[];
+    } else {
+      throw Error(res.statusText);
+    }
+  }
+
+  async GetWorkOrders(key: string): Promise<WorkOrderDto[]> {
+    this.key = key;
+    const res = await this.get(this._urlGetWorkOrders);
+    console.warn(`==> NrgClient.GetWorkOrders`);
+    console.dir(res);
+
+    if (res.ok) {
+      const data = (await res.json()) as WorkOrdersDtosChunked;
+      console.dir(data);
+      const flatItems: WorkOrderDto[] = data.Items.flat();
+      console.dir(flatItems);
+      return flatItems as WorkOrderDto[];
+    } else {
+      throw Error(res.statusText);
+    }
+  }
+
+  async GetWorkOrdersByProjectNumber(
     projectNumber: string,
-  ): Promise<ProjectWorkOrderResultModel> {
+  ): Promise<WorkOrderDto[]> {
     const res = await this.get(`/api/projects/${projectNumber}/workorders`);
     if (res.ok) {
-      return (await res.json()) as ProjectWorkOrderResultModel;
+      const data = (await res.json()) as WorkOrdersDtosChunked;
+      console.dir(data);
+      const flatItems: WorkOrderDto[] = data.Items.flat();
+      console.dir(flatItems);
+      return flatItems as WorkOrderDto[];
     } else {
       let errorMsg = res.statusText;
       try {
@@ -300,4 +226,31 @@ export class NrgClient implements INrgClient {
       throw new Error(errorMsg);
     }
   }
+
+  // async GetLaborKanbanGridItems(): Promise<MesLaborGridResponseDto> {
+  //   const res = await this.get(this._urlGetLaborKanbanGridItems);
+  //   console.warn("==> NrgClient.GetLaborKanbanGridItems");
+  //   console.dir(res);
+  //   if (res.ok) {
+  //     const data = (await res.json()) as MesLaborGridResponseDto;
+  //     console.dir(data);
+  //     return data;
+  //   } else {
+  //     throw Error(res.statusText);
+  //   }
+  // }
+
+  // async GetDateManagementByMonth(year: number, month: number): Promise<DateManagementByMonthDto> {
+  //   const url = `/api/dateManagement/${year}/${month}`;
+  //   const res = await this.get(url);
+  //   console.warn(`==> NrgClient.GetDateManagementByMonth(${year}, ${month})`);
+  //   console.dir(res);
+  //   if (res.ok) {
+  //     const data = (await res.json()) as DateManagementByMonthDto;
+  //     console.dir(data);
+  //     return data;
+  //   } else {
+  //     throw Error(res.statusText);
+  //   }
+  // }
 }

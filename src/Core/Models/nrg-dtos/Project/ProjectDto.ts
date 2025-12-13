@@ -1,7 +1,7 @@
 import type { MonetaryValueDto } from "./MonetaryValueDto";
 
-export interface ProjectDtos {
-  Items: ProjectDto[] | null;
+export interface ProjectDtosChunked {
+  Items: ProjectDto[][];
 }
 
 export interface ProjectDto {

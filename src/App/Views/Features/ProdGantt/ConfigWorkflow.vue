@@ -68,29 +68,19 @@
 </template>
 
 <script setup lang="ts">
+import type { WorkflowStep } from '@/Core/Models/ProdGantt/WorkflowStep';
 import { ref, onMounted, computed, watch } from 'vue';
 import { useRouter } from 'vue-router';
-import { useWorkflowsState } from '@/data/states/WorkflowAsync/workflows-state';
-import { useLaborPlannerState } from '@/data/states/WorkflowAsync/labor-planner-state';
-import { useAppState } from '@/data/states/App/app-state';
-import type { WorkflowWithSteps } from '@/core/models/WorkflowAsync/WorkflowWithSteps';
 
-defineOptions({ name: 'WorkflowDurationConfig' });
-
-const workflows$ = useWorkflowsState();
-const laborPlanner$ = useLaborPlannerState();
-const app$ = useAppState();
 const router = useRouter();
-const workflowsWithSteps = ref<WorkflowWithSteps[]>([]);
 
-const STORAGE_KEY = 'workflow-durations-config';
+const STORAGE_KEY = 'workflow-config';
 
 const initializeWorkflows = () => {
   // Try to load from localStorage first
   const stored = localStorage.getItem(STORAGE_KEY);
   if (stored) {
     try {
-      workflowsWithSteps.value = JSON.parse(stored);
       console.log('[WorkflowDurationConfig] Loaded from storage');
       return;
     } catch (err) {
@@ -98,83 +88,46 @@ const initializeWorkflows = () => {
     }
   }
 
-  // Otherwise initialize from workflows state
-  workflowsWithSteps.value = workflows$.Workflows.map((wf) => ({
-    workflowId: wf.Id,
-    workflowName: wf.Name,
-    steps: [],
-  }));
+  // Otherwise initialize new from workflow-state
 };
 
-const addStep = (workflowId: string) => {
-  const workflow = workflowsWithSteps.value.find((w) => w.workflowId === workflowId);
-  if (workflow) {
-    workflow.steps.push({
-      phase: workflow.steps.length + 1,
-      name: '',
-      duration: 1,
-      laborItemIds: [],
-    });
-  }
+const addStep = (step: WorkflowStep) => {
+  // Update workflow-state
+  // Update Cache
 };
 
-const removeStep = (workflowId: string, stepIndex: number) => {
-  const workflow = workflowsWithSteps.value.find((w) => w.workflowId === workflowId);
-  if (workflow) {
-    workflow.steps.splice(stepIndex, 1);
-  }
+const removeStep = (stepId: string) => {
+  // Update workflow-state by removing step with this stepId
+  // Update Cache
 };
 
-const confirmRemove = (workflowId: string, stepIndex: number, name: string) => {
+const confirmRemove = (workflowId: string, stepId: string, name: string) => {
   app$.openModal('confirm', {
     title: 'Remove Step?',
     message: `Are you sure you want to remove "${name || 'this step'}"?`,
     confirmText: 'Remove',
     cancelText: 'Cancel',
     confirmType: 'error',
-    onConfirm: () => removeStep(workflowId, stepIndex),
+    onConfirm: () => removeStep(stepId),
   });
 };
 
-const moveStep = (workflowId: string, stepIndex: number, direction: 'up' | 'down') => {
-  const workflow = workflowsWithSteps.value.find((w) => w.workflowId === workflowId);
-  if (!workflow) return;
-
-  const newIndex = direction === 'up' ? stepIndex - 1 : stepIndex + 1;
-  if (newIndex < 0 || newIndex >= workflow.steps.length) return;
-
-  // Swap the steps using splice for proper reactivity
-  const [removed] = workflow.steps.splice(stepIndex, 1);
-  if (removed) {
-    workflow.steps.splice(newIndex, 0, removed);
-  }
+const moveStep = (stepIndex: number, direction: 'up' | 'down') => {
+  // Update the order of steps in workflow-state
+  // Update Cache
 };
 
 const handleSave = () => {
   try {
-    // Calculate phase numbers based on position before saving
-    workflowsWithSteps.value.forEach(workflow => {
-      workflow.steps.forEach((step, index) => {
-        step.phase = index + 1;
-      });
-    });
 
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(workflowsWithSteps.value));
-    console.log('[WorkflowDurationConfig] Saved to storage');
-    // Could show a success message here
   } catch (err) {
-    console.error('[WorkflowDurationConfig] Failed to save', err);
+
   }
 };
 
 const resetWorkflow = (workflowId: string) => {
-  const workflow = workflowsWithSteps.value.find((w) => w.workflowId === workflowId);
-  if (!workflow) return;
-
-  if (confirm(`Reset "${workflow.workflowName}" configuration? This will clear all steps.`)) {
-    workflow.steps = [];
-    handleSave(); // Auto-save after reset
-  }
+  // Reset the workflow steps to empty or default
+  // Clear Cache
 };
 
 
@@ -194,32 +147,19 @@ const laborItemOptions = computed(() =>
 );
 
 // Auto-save whenever workflows change
-watch(workflowsWithSteps, () => {
+watch(workflow, () => {
   handleSave();
 }, { deep: true });
 
 onMounted(async () => {
-  // Workflows and labor items are loaded from cache on store init
-  // They're refreshed via the data refresh page
-  if (workflows$.Workflows.length === 0 || laborPlanner$.LaborItems.length === 0) {
-    app$.setAppStatus('error', 'No data available. Please refresh data first.');
-    router.push({ name: 'data-refresh' });
-    return;
-  }
+  // If no data in memory, check cache.
+  // If no data in cache, use pinia states to call NrgClient to populate data.
+  // If no data comes from NrgClient, redirect to data refresh page.
+  // AppStatus Error message, "Check your api key or internet connection."
 
   initializeWorkflows();
 });
 
 </script>
 
-<style scoped>
-.workflow-section {
-  margin-bottom: 16px;
-}
-
-.step-row {
-  padding: 8px;
-  border-radius: 4px;
-  /* background-color: var(--n-color-target); */
-}
-</style>
+<style scoped></style>
