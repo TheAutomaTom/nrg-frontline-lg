@@ -7,13 +7,13 @@
       and labor items.
     </n-alert>
 
-    <n-select v-model:value="selectedWorkflowId" :options="workflowOptions" :loading="workflows$.IsLoadingWorkflows"
-      placeholder="Choose a workflow" clearable class="third-at-fullscreen" />
+    <n-select v-if="workflowOptions.length > 1" v-model:value="selectedWorkflowId" :options="workflowOptions"
+      :loading="workflows$.IsLoadingWorkflows" placeholder="Choose a workflow" clearable class="third-at-fullscreen" />
 
 
 
     <div v-if="selectedWorkflow">
-      <n-card :title="selectedWorkflow.Name" size="small" :bordered="false">
+      <n-card :title="`${selectedWorkflow.Name} Configuration`" size="small" :bordered="false">
         <template #header-extra>
           <n-space :size="8">
             <n-button size="small" @click="resetWorkflow(selectedWorkflow.Id)">
@@ -34,11 +34,17 @@
                   @click="moveStepInWorkflow(selectedWorkflow.Id, idx, 'up')" title="Move up">▲</n-button>
                 <n-button text size="tiny" :disabled="idx === selectedWorkflowSteps.length - 1"
                   @click="moveStepInWorkflow(selectedWorkflow.Id, idx, 'down')" title="Move down">▼</n-button>
+
               </div>
+              <n-input-number v-model:value="step.TypicalDayCount" placeholder="Days" :min="1" :step="1" :precision="0"
+                style="width: 120px">
+                <template #suffix>
+                  day(s)
+                </template>
+              </n-input-number>
               <n-input v-model:value="step.Name" placeholder="Step name" style="flex: 1; min-width: 200px"
                 class="step-name-input" />
-              <n-input-number v-model:value="step.TypicalDayCount" placeholder="Days" :min="1" :step="1" :precision="0"
-                style="width: 120px" />
+
               <n-button text type="error" @click="removeStepFromWorkflow(selectedWorkflow.Id, idx)">✕</n-button>
               <n-select v-model:value="step.LaborItems" multiple filterable placeholder="Select labor items"
                 :options="enabledLaborOptions" style="min-width: 240px" />
@@ -82,22 +88,26 @@ const enabledLaborOptions = computed(() => {
   }));
 });
 
-const workflowStepsMap = ref<Record<string, WorkflowStep[]>>({});
-
 const selectedWorkflow = computed(() => {
   if (!selectedWorkflowId.value || !workflows$.Workflows) return null;
   return workflows$.Workflows.find((w) => w.Id === selectedWorkflowId.value) ?? null;
 });
 
+const selectedWorkflowSteps = computed(() => {
+  if (!selectedWorkflow.value) return [];
+  const id = selectedWorkflow.value.Id;
+  return workflows$.WorkflowStepsMap[id] || [];
+});
 
 // Auto-select the workflow if only one is available
 import { watch, nextTick } from 'vue';
+
 watch(
   () => workflowOptions.value,
   (opts) => {
     if (opts.length === 1 && !selectedWorkflowId.value) {
       nextTick(() => {
-        selectedWorkflowId.value = opts[0].value;
+        selectedWorkflowId.value = opts[0]?.value ?? null;
       });
     }
   },
@@ -108,7 +118,7 @@ watch(
 
 // --- Workflow Step Management Functions ---
 function addStepToWorkflow(workflowId: string) {
-  const steps = workflowStepsMap.value[workflowId] || [];
+  const steps = workflows$.WorkflowStepsMap[workflowId] || [];
   steps.push({
     Id: generateGuid(),
     Name: '',
@@ -116,11 +126,11 @@ function addStepToWorkflow(workflowId: string) {
     TypicalDayCount: 1,
     LaborItems: [],
   });
-  workflowStepsMap.value[workflowId] = steps;
+  workflows$.WorkflowStepsMap[workflowId] = steps;
 }
 
 function removeStepFromWorkflow(workflowId: string, idx: number) {
-  const steps = workflowStepsMap.value[workflowId] || [];
+  const steps = workflows$.WorkflowStepsMap[workflowId] || [];
   steps.splice(idx, 1);
   if (steps.length === 0) {
     steps.push({
@@ -131,21 +141,21 @@ function removeStepFromWorkflow(workflowId: string, idx: number) {
       LaborItems: [],
     });
   }
-  workflowStepsMap.value[workflowId] = steps;
+  workflows$.WorkflowStepsMap[workflowId] = steps;
 }
 
 function moveStepInWorkflow(workflowId: string, idx: number, dir: 'up' | 'down') {
-  const steps = workflowStepsMap.value[workflowId] || [];
+  const steps = workflows$.WorkflowStepsMap[workflowId] || [];
   const swapWith = dir === 'up' ? idx - 1 : idx + 1;
   if (swapWith < 0 || swapWith >= steps.length) return;
   const tmp = steps[idx]!;
   steps[idx] = steps[swapWith]!;
   steps[swapWith] = tmp;
-  workflowStepsMap.value[workflowId] = steps;
+  workflows$.WorkflowStepsMap[workflowId] = steps;
 }
 
 function resetWorkflow(workflowId: string) {
-  workflowStepsMap.value[workflowId] = [
+  workflows$.WorkflowStepsMap[workflowId] = [
     {
       Id: generateGuid(),
       Name: '',
@@ -157,35 +167,11 @@ function resetWorkflow(workflowId: string) {
 }
 
 function saveWorkflowSteps(workflowId: string) {
-  const steps = workflowStepsMap.value[workflowId] || [];
+  const steps = workflows$.WorkflowStepsMap[workflowId] || [];
   // Re-sequence steps
   steps.forEach((s, i) => (s.Sequence = i + 1));
-  workflowStepsMap.value[workflowId] = steps;
+  workflows$.WorkflowStepsMap[workflowId] = steps;
   // TODO: Persist to cache or backend
   console.log('Saved workflow steps for', workflowId, steps);
 }
 </script>
-
-<style scoped>
-.flex-columns {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-@media (min-width: 900px) {
-  .flex-columns {
-    flex-direction: row;
-    align-items: center;
-    gap: 16px;
-  }
-
-  .flex-columns__alert {
-    flex: 1 1 auto;
-  }
-
-  .third-at-fullscreen {
-    width: 33%;
-  }
-}
-</style>
