@@ -4,30 +4,11 @@
 
     <n-tabs class="card-tabs" default-value="workflows" size="large" animated pane-wrapper-style="margin: 0 -4px"
       pane-style="padding-left: 4px; padding-right: 4px; box-sizing: border-box;">
-      <n-tab-pane name="workflows" tab="Workflows">
+      <n-tabs></n-tabs>
+      <ConfigTabWorkflows />
+      <ConfigTabWeek />
+      <ConfigTabLabors />
 
-
-        <div class="workflow-selector">
-          <n-select v-model:value="selectedWorkflowId" :options="workflowOptions"
-            :loading="workflows$.IsLoadingWorkflows" placeholder="Choose a workflow" clearable
-            class="workflow-selector__select" />
-
-          <n-alert type="info" class="text-sm workflow-selector__alert">
-            This tool requires manually configuring workflow steps.
-            <n-button v-if="selectedWorkflow?.Name === 'Primary Workflow'" size="small" @click="handleReset"
-              style="text-decoration: line-through;">Reset to Default
-              Workflow</n-button>
-          </n-alert>
-
-        </div>
-
-      </n-tab-pane>
-      <n-tab-pane name="week" tab="Week">
-
-      </n-tab-pane>
-      <n-tab-pane name="labors" tab="Labors">
-
-      </n-tab-pane>
     </n-tabs>
 
     <n-space vertical :size="24">
@@ -42,28 +23,15 @@
 
 <script setup lang="ts">
 import type { WorkflowStep } from '@/Core/Models/ProdGantt/WorkflowStep';
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useWorkflowsState } from '@/Data/States/App/ProdGantt/workflows-state';
-import type { WorkflowDto } from '@/Core/Models/nrg-dtos/WorkflowDto';
+import ConfigTabWorkflows from './ConfigTabs/ConfigTabWorkflows.vue';
+import ConfigTabWeek from './ConfigTabs/ConfigTabWeek.vue';
+import ConfigTabLabors from './ConfigTabs/ConfigTabLabors.vue';
 
 const router = useRouter();
 const workflows$ = useWorkflowsState();
-
-const selectedWorkflowId = ref<string | null>(null);
-
-const workflowOptions = computed(() => {
-  if (!workflows$.Workflows) return [];
-  return workflows$.Workflows.map((w) => ({
-    label: w.Name,
-    value: w.Id,
-  }));
-});
-
-const selectedWorkflow = computed(() => {
-  if (!selectedWorkflowId.value || !workflows$.Workflows) return null;
-  return workflows$.Workflows.find((w) => w.Id === selectedWorkflowId.value) ?? null;
-});
 
 const workflowSteps = ref<WorkflowStep[]>([]);
 
@@ -144,26 +112,4 @@ onMounted(async () => {
 
 </script>
 
-<style scoped>
-.workflow-selector {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-@media (min-width: 900px) {
-  .workflow-selector {
-    flex-direction: row;
-    align-items: center;
-    gap: 16px;
-  }
-
-  .workflow-selector__alert {
-    flex: 1 1 auto;
-  }
-
-  .workflow-selector__select {
-    width: 320px;
-  }
-}
-</style>
+<style scoped></style>

@@ -4,9 +4,8 @@ import { NrgClient } from "@/Data/Clients/NrgClient";
 import { useUserConfigState } from "../user-config-state";
 import { useAppState } from "../app-state";
 import { LaborItemsCache } from "@/Data/Caches/ProdGantt/LaborItemsCache";
-import { OperationsCache } from "@/Data/Caches/ProdGantt/OperationsCache";
+import { EnabledLaborsCache } from "@/Data/Caches/ProdGantt/EnabledLaborsCache";
 import type { LaborItemDto } from "@/Core/Models/nrg-dtos/LaborItemDto";
-import type { OperationDto } from "@/Core/Models/nrg-dtos/Operation/OperationDto";
 
 export const useLaborsAndOperationsState = defineStore(
   "LaborsAndOperationsState",
@@ -16,10 +15,8 @@ export const useLaborsAndOperationsState = defineStore(
     const nrg = app$.NrgClient ?? new NrgClient();
 
     const LaborItems = ref<LaborItemDto[] | null>(null);
-    const Operations = ref<OperationDto[] | null>(null);
-
+    const EnabledLaborIds = ref<Set<string>>(new Set());
     const IsLoadingLaborItems = ref(false);
-    const IsLoadingOperations = ref(false);
 
     const loadLaborItemsFromCache = (): boolean => {
       const cached = LaborItemsCache.load();
@@ -30,13 +27,14 @@ export const useLaborsAndOperationsState = defineStore(
       return false;
     };
 
-    const loadOperationsFromCache = (): boolean => {
-      const cached = OperationsCache.load();
+    const loadEnabledLaborsFromCache = (): void => {
+      const cached = EnabledLaborsCache.load();
       if (cached) {
-        Operations.value = cached;
-        return true;
+        EnabledLaborIds.value = new Set(cached);
+      } else if (LaborItems.value) {
+        // Default: all items enabled
+        EnabledLaborIds.value = new Set(LaborItems.value.map((l) => l.LaborId));
       }
-      return false;
     };
 
     const LoadLaborItems = async (): Promise<void> => {
@@ -52,6 +50,7 @@ export const useLaborsAndOperationsState = defineStore(
         const laborItems = await nrg.GetLaborItems();
         LaborItems.value = laborItems;
         LaborItemsCache.save(laborItems);
+        loadEnabledLaborsFromCache();
         app$.setAppStatus("success", "Labor items loaded.");
       } catch (err) {
         const fallbackUsed = loadLaborItemsFromCache();
@@ -59,6 +58,7 @@ export const useLaborsAndOperationsState = defineStore(
           (err as Error)?.message ||
           (typeof err === "string" ? err : "Unknown error");
         if (fallbackUsed) {
+          loadEnabledLaborsFromCache();
           app$.setAppStatus("error", "Labor items failed. Using cached data.");
         } else {
           app$.setAppStatus("error", `Labor items failed: ${message}`);
@@ -69,44 +69,40 @@ export const useLaborsAndOperationsState = defineStore(
       }
     };
 
-    const LoadOperations = async (): Promise<void> => {
-      const key = (config$.Key ?? "").trim();
-      if (!key) {
-        app$.setAppStatus("error", "Missing API key for operations.");
-        return;
+    const ToggleLaborEnabled = (laborId: string): void => {
+      if (EnabledLaborIds.value.has(laborId)) {
+        EnabledLaborIds.value.delete(laborId);
+      } else {
+        EnabledLaborIds.value.add(laborId);
       }
-      app$.showLoading();
-      IsLoadingOperations.value = true;
-      nrg.SetKey(key);
-      try {
-        const operationsResult = await nrg.GetOperations();
-        const operations = operationsResult.Items ?? [];
-        Operations.value = operations;
-        OperationsCache.save(operations);
-        app$.setAppStatus("success", "Operations loaded.");
-      } catch (err) {
-        const fallbackUsed = loadOperationsFromCache();
-        const message =
-          (err as Error)?.message ||
-          (typeof err === "string" ? err : "Unknown error");
-        if (fallbackUsed) {
-          app$.setAppStatus("error", "Operations failed. Using cached data.");
-        } else {
-          app$.setAppStatus("error", `Operations failed: ${message}`);
-        }
-      } finally {
-        IsLoadingOperations.value = false;
-        app$.hideLoading();
-      }
+      EnabledLaborsCache.save(Array.from(EnabledLaborIds.value));
     };
+
+    const IsLaborEnabled = (laborId: string): boolean => {
+      return EnabledLaborIds.value.has(laborId);
+    };
+
+    const SetAllLaborsEnabled = (enabled: boolean): void => {
+      if (enabled && LaborItems.value) {
+        EnabledLaborIds.value = new Set(LaborItems.value.map((l) => l.LaborId));
+      } else {
+        EnabledLaborIds.value.clear();
+      }
+      EnabledLaborsCache.save(Array.from(EnabledLaborIds.value));
+    };
+
+    // Load from cache on init
+    loadLaborItemsFromCache();
+    loadEnabledLaborsFromCache();
 
     return {
       LaborItems,
-      Operations,
+      EnabledLaborIds,
       IsLoadingLaborItems,
-      IsLoadingOperations,
       LoadLaborItems,
-      LoadOperations,
+      ToggleLaborEnabled,
+      IsLaborEnabled,
+      SetAllLaborsEnabled,
     };
   },
 );

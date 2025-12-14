@@ -9,7 +9,7 @@
 -->
 
     <n-button class="footer-button" :class="{ 'highlight-active': routeName === 'lg-config' }" size="small"
-      @click="goConfigWorkflows" aria-label="Config Workflow">
+      @click="goConfigureProdGantt" aria-label="Config Workflow">
       <span class="icon">⚙️</span>
       <span class="label hide-on-mobile">Config Workflow</span>
     </n-button>
@@ -25,7 +25,7 @@ const route = useRoute();
 
 const routeName = computed(() => route?.name as string | undefined);
 
-const goConfigWorkflows = () => router.push({ name: 'lg-config' });
+const goConfigureProdGantt = () => router.push({ name: 'lg-config' });
 </script>
 
 <style scoped>
