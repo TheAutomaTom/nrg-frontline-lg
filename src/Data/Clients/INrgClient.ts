@@ -3,7 +3,7 @@ import type { LaborItemDto } from "../../Core/Models/nrg-dtos/LaborItemDto";
 import type { MesLaborGridResponseDto } from "../../Core/Models/nrg-dtos/MesLaborGrid";
 // import type { DateManagementByMonthDto } from "../../Core/Models/nrg-dtos/DateManagementByMonth";
 import type { WorkflowsDto } from "../../Core/Models/nrg-dtos/WorkflowDto";
-import type { OperationDtos } from "@/Core/Models/nrg-dtos/OperationDto";
+import type { OperationDtos } from "@/Core/Models/nrg-dtos/Operation/OperationDto";
 
 export interface INrgClient {
   GetWorkOrders(
@@ -16,5 +16,4 @@ export interface INrgClient {
   // GetDateManagementByMonth(year: number, month: number): Promise<DateManagementByMonthDto>;
   GetWorkflows(): Promise<WorkflowsDto>;
   GetOperations(): Promise<OperationDtos>;
-  importEngineeringSyncDataRaw(json: string): Promise<any>;
 }

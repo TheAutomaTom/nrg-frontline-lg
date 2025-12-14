@@ -1,4 +1,4 @@
-import type { OperationDto } from "@/Core/Models/nrg-dtos/OperationDto";
+import type { OperationDto } from "@/Core/Models/nrg-dtos/Operation/OperationDto";
 
 export class OperationsCache {
   private static readonly STORAGE_KEY = "nrg-frontline-operations";

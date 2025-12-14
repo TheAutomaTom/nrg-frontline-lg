@@ -12,7 +12,7 @@ import type {
 } from "@/Core/Models/nrg-dtos/WorkOrderDto";
 import type { INrgClient } from "./INrgClient";
 // import { ResponseState } from "../ResponseState";
-import type { OperationDtos } from "@/Core/Models/nrg-dtos/OperationDto";
+import type { OperationDtos } from "@/Core/Models/nrg-dtos/Operation/OperationDto";
 import type {
   ProjectDto,
   ProjectDtosChunked,
@@ -54,9 +54,6 @@ export class NrgClient implements INrgClient {
     }
   }
   GetLaborKanbanGridItems(): Promise<MesLaborGridResponseDto> {
-    throw new Error("Method not implemented.");
-  }
-  importEngineeringSyncDataRaw(json: string): Promise<any> {
     throw new Error("Method not implemented.");
   }
 

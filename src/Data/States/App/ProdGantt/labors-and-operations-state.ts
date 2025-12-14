@@ -6,7 +6,7 @@ import { useAppState } from "../app-state";
 import { LaborItemsCache } from "@/Data/Caches/ProdGantt/LaborItemsCache";
 import { OperationsCache } from "@/Data/Caches/ProdGantt/OperationsCache";
 import type { LaborItemDto } from "@/Core/Models/nrg-dtos/LaborItemDto";
-import type { OperationDto } from "@/Core/Models/nrg-dtos/OperationDto";
+import type { OperationDto } from "@/Core/Models/nrg-dtos/Operation/OperationDto";
 
 export const useLaborsAndOperationsState = defineStore(
   "LaborsAndOperationsState",

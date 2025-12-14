@@ -1,8 +1,8 @@
-import type { UserIdentifierDto } from "./UserIdentifierDto";
+import type { PersonRefDto } from "../PersonRefDto";
 
 export interface ProjectConvertedFromOpportunityDto {
   Id: string;
   Name: string | null;
   ConversionDate: string | null;
-  ConvertedBy: UserIdentifierDto | null;
+  ConvertedBy: PersonRefDto | null;
 }
