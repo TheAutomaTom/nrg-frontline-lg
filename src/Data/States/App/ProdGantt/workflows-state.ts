@@ -12,6 +12,7 @@ export const useWorkflowsState = defineStore("WorkflowsState", () => {
   const nrg = app$.NrgClient ?? new NrgClient();
 
   const Workflows = ref<WorkflowDto[] | null>(null);
+  const WorkflowSource = ref<"api" | "cache" | null>(null);
   const IsLoadingWorkflows = ref(false);
 
   const loadWorkflowsFromCache = (): boolean => {
@@ -33,20 +34,22 @@ export const useWorkflowsState = defineStore("WorkflowsState", () => {
     IsLoadingWorkflows.value = true;
     nrg.SetKey(key);
     try {
-      const workflows = await nrg.GetWorkflows();
-      Workflows.value = workflows;
-      WorkflowsCache.save(workflows);
-      app$.setAppStatus("success", "Workflows loaded.");
+      const hasCachedData = loadWorkflowsFromCache();
+      if (hasCachedData) {
+        WorkflowSource.value = "cache";
+        app$.setAppStatus("success", "Cached workflows loaded.");
+      } else {
+        const workflows = await nrg.GetWorkflows();
+        Workflows.value = workflows;
+        WorkflowsCache.save(workflows);
+        WorkflowSource.value = "api";
+        app$.setAppStatus("success", "Workflows loaded from API.");
+      }
     } catch (err) {
-      const fallbackUsed = loadWorkflowsFromCache();
       const message =
         (err as Error)?.message ||
         (typeof err === "string" ? err : "Unknown error");
-      if (fallbackUsed) {
-        app$.setAppStatus("error", "Workflows failed. Using cached data.");
-      } else {
-        app$.setAppStatus("error", `Workflows failed: ${message}`);
-      }
+      app$.setAppStatus("error", `Workflows failed: ${message}`);
     } finally {
       IsLoadingWorkflows.value = false;
       app$.hideLoading();
@@ -58,6 +61,7 @@ export const useWorkflowsState = defineStore("WorkflowsState", () => {
 
   return {
     Workflows,
+    WorkflowSource,
     IsLoadingWorkflows,
     LoadWorkflows,
   };
