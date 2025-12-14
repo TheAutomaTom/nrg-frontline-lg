@@ -1,41 +1,14 @@
 <template>
-  <div class="workflow-selector">
+  <div class="flex-columns">
     <n-select v-model:value="selectedWorkflowId" :options="workflowOptions" :loading="workflows$.IsLoadingWorkflows"
-      placeholder="Choose a workflow" clearable class="workflow-selector__select" />
+      placeholder="Choose a workflow" clearable class="third-at-fullscreen" />
 
-    <n-button type="primary" @click="showCreate = !showCreate" style="margin-left: 12px;">
-      {{ showCreate ? 'Cancel' : 'Create New Workflow' }}
-    </n-button>
 
-    <n-alert type="info" class="text-sm workflow-selector__alert">
-      This tool requires manually configuring workflow steps.
-    </n-alert>
+
   </div>
 
-  <div v-if="showCreate" class="workflow-create">
-    <div class="workflow-create__row">
-      <label>Name:</label>
-      <n-input v-model:value="newWorkflow.Name" placeholder="Workflow Name" style="width: 240px;" />
-    </div>
-    <div class="workflow-create__row">
-      <label>Steps:</label>
-      <n-button size="small" @click="addStep" style="margin-left: 8px;">Add Step</n-button>
-    </div>
-    <div class="workflow-steps-list">
-      <div v-for="(step, idx) in newWorkflow.Steps" :key="step.Id" class="workflow-step-row">
-        <n-button size="small" quaternary :disabled="idx === 0" @click="moveStep(idx, 'up')">▲</n-button>
-        <n-button size="small" quaternary :disabled="idx === newWorkflow.Steps.length - 1"
-          @click="moveStep(idx, 'down')">▼</n-button>
-        <n-switch v-model:value="step.Enabled" style="margin: 0 8px;" />
-        <n-input v-model:value="step.Name" placeholder="Step Name" style="width: 140px; margin-right: 8px;" />
-        <n-input-number v-model:value="step.TypicalDayCount" :min="1" style="width: 80px; margin-right: 8px;" />
-        <span style="color: #888; font-size: 12px;">Days</span>
-        <n-button size="small" quaternary @click="removeStep(idx)" style="margin-left: 8px;">Remove</n-button>
-      </div>
-    </div>
-    <div class="workflow-create__row">
-      <n-button type="primary" @click="saveWorkflow">Save Workflow</n-button>
-    </div>
+  <div v-if="showCreate" class="workflow-editor">
+
   </div>
 </template>
 
@@ -114,53 +87,25 @@ function saveWorkflow() {
 </script>
 
 <style scoped>
-.workflow-selector {
+.flex-columns {
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
 
-.workflow-create {
-  margin-top: 24px;
-  border: 1px solid #eee;
-  border-radius: 8px;
-  padding: 16px;
-  background: #fafbfc;
-  max-width: 700px;
-}
-
-.workflow-create__row {
-  display: flex;
-  align-items: center;
-  margin-bottom: 12px;
-  gap: 8px;
-}
-
-.workflow-steps-list {
-  margin-left: 16px;
-  margin-bottom: 16px;
-}
-
-.workflow-step-row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-bottom: 6px;
-}
-
 @media (min-width: 900px) {
-  .workflow-selector {
+  .flex-columns {
     flex-direction: row;
     align-items: center;
     gap: 16px;
   }
 
-  .workflow-selector__alert {
+  .flex-columns__alert {
     flex: 1 1 auto;
   }
 
-  .workflow-selector__select {
-    width: 320px;
+  .third-at-fullscreen {
+    width: 33%;
   }
 }
 </style>

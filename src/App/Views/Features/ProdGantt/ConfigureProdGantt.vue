@@ -2,7 +2,7 @@
   <n-card title="Configuration">
     <div>
       <n-alert type="info" closable>
-        This tool has very limited access to server configuration. <br />
+        This tool has very limited access to server configuration. <br class="responsive-break" />
         Manual workflow setup is required.
       </n-alert>
     </div>
@@ -123,4 +123,10 @@ onMounted(async () => {
 
 </script>
 
-<style scoped></style>
+<style scoped>
+@media (max-width: 800px) {
+  .responsive-break {
+    display: inline;
+  }
+}
+</style>
