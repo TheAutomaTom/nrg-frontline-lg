@@ -66,6 +66,7 @@ export const useAppState = defineStore("AppState", () => {
     | "route"
     | "test-api-key"
     | "project-pak-material-report-parser"
+    | "prod-gantt"
     | null
   >(null);
 
@@ -76,6 +77,7 @@ export const useAppState = defineStore("AppState", () => {
       | "route"
       | "test-api-key"
       | "project-pak-material-report-parser"
+      | "prod-gantt"
       | null,
   ) => {
     ActiveFeature.value = feature;

@@ -11,10 +11,8 @@
         <!-- Feature-specific footer components -->
         <template v-if="instance$.LastTestApiKeySuccess && instance$.TestedTenantInfo">
 
-          <!-- <LaborImporterFooter
-            v-if="app$.ActiveFeature === 'labor-importer' || (app$.ActiveFeature === null && isLaborImporter)" />
-          <ProjectPakMaterialReportParserFooterButtons
-            v-if="app$.ActiveFeature === 'project-pak-material-report-parser' || (app$.ActiveFeature === null && isProjectPakMaterialReportParser)" /> -->
+          <ProdGanttFooterButtons v-if="app$.ActiveFeature === 'prod-gantt'" />
+
         </template>
         <!-- ==== Right Justified ======================================================================= -->
       </div>
@@ -43,6 +41,7 @@ import { useInstanceState } from '@/Data/States/App/instance-state';
 import { computed } from 'vue';
 import type { AppStatusKind } from '@/Core/Models/infra/AppStatus';
 import { APP_STATUS_GLYPHS } from '@/Core/Models/infra/AppStatus';
+import ProdGanttFooterButtons from '../Features/ProdGantt/ProdGanttFooterButtons.vue';
 
 const app$ = useAppState();
 const instance$ = useInstanceState();

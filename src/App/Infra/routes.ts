@@ -2,15 +2,6 @@ import { createRouter, createWebHistory } from "vue-router";
 import { useAppState } from "@/Data/States/App/app-state";
 import DataRefresh from "@/App/Views/Home/DataRefresh.vue";
 import DataBackup from "@/App/Views/Home/DataBackup.vue";
-// TODO: Create missing PlannedLaborImporter components
-// import PliTestPage from "@/App/Views/Features/PlannedLaborImporter/PliTestPage.vue";
-// import PliConfigLabors from "@/App/Views/Features/PlannedLaborImporter/PliConfig/PliConfigLabors.vue";
-// import PliProjectPicker from "@/App/Views/Features/PlannedLaborImporter/PliConfig/PliProjectPicker.vue";
-// import PliLaborImporter from "../Views/Features/PlannedLaborImporter/PliLaborImporter.vue";
-// import PliHelpPage from "../Views/Features/PlannedLaborImporter/PliHelpPage.vue";
-// import PliOpsTestPage from "../Views/Features/PlannedLaborImporter/PliOpsTestPage.vue";
-// TODO: Create missing ProjectPak components
-// import ProjectPakMaterialReportParser from "../Views/Features/ProjectPak/MaterialReportParser/ProjectPakMaterialReportParser.vue";
 
 const routes = [
   {
@@ -23,42 +14,12 @@ const routes = [
     name: "data-backup",
     component: DataBackup,
   },
-  // TODO: Add PlannedLaborImporter and ProjectPak routes when components are created
-  // {
-  //   path: "/pli-test-page",
-  //   name: "pli-test-page",
-  //   component: PliTestPage,
-  // },
-  // {
-  //   path: "/pli-config-labors",
-  //   name: "pli-config-labors",
-  //   component: PliConfigLabors,
-  // },
-  // {
-  //   path: "/pli-project-picker",
-  //   name: "pli-project-picker",
-  //   component: PliProjectPicker,
-  // },
-  // {
-  //   path: "/pli-labor-importer",
-  //   name: "pli-labor-importer",
-  //   component: PliLaborImporter,
-  // },
-  // {
-  //   path: "/help/planned-labor-import",
-  //   name: "help-planned-labor-import",
-  //   component: PliHelpPage,
-  // },
-  // {
-  //   path: "/pli-operations-test",
-  //   name: "pli-operations-test",
-  //   component: PliOpsTestPage,
-  // },
-  // {
-  //   path: "/project-pak-material-report-parser",
-  //   name: "project-pak-material-report-parser",
-  //   component: ProjectPakMaterialReportParser,
-  // },
+  {
+    path: "/lg-config-workflow",
+    name: "lg-config-workflow",
+    component: () =>
+      import("@/App/Views/Features/ProdGantt/ConfigWorkflow.vue"),
+  },
 ];
 
 export const router = createRouter({
