@@ -1,12 +1,21 @@
 import { defineStore } from "pinia";
-import { ref } from "vue";
+import { ref, computed } from "vue";
 import { NrgClient } from "@/Data/Clients/NrgClient";
 import { useUserConfigState } from "../user-config-state";
 import { useAppState } from "../app-state";
 import { LaborItemsCache } from "@/Data/Caches/ProdGantt/LaborItemsCache";
-import { EnabledLaborsCache } from "@/Data/Caches/ProdGantt/EnabledLaborsCache";
-import { LaborOrderCache } from "../../../../Data/Caches/ProdGantt/LaborOrderCache";
 import type { LaborItemDto } from "@/Core/Models/nrg-dtos/LaborItemDto";
+
+// Enhanced labor item with sequence and enabled state
+export interface EnhancedLaborItem extends LaborItemDto {
+  Sequence: number;
+  IsEnabled: boolean;
+}
+
+// Cache keys for enhanced labor lists by type
+const ENHANCED_DRAFTING_KEY = "nrg-frontline-enhanced-drafting";
+const ENHANCED_PRODUCTION_KEY = "nrg-frontline-enhanced-production";
+const ENHANCED_INSTALLATION_KEY = "nrg-frontline-enhanced-installation";
 
 export const useLaborsAndOperationsState = defineStore(
   "LaborsAndOperationsState",
@@ -15,39 +24,150 @@ export const useLaborsAndOperationsState = defineStore(
     const config$ = useUserConfigState();
     const nrg = app$.NrgClient ?? new NrgClient();
 
-    const LaborItems = ref<LaborItemDto[] | null>(null);
-    const EnabledLaborIds = ref<Set<string>>(new Set());
-    const LaborOrder = ref<string[] | null>(null);
+    // Immutable list from API (cached separately)
+    const ApiLaborItems = ref<LaborItemDto[] | null>(null);
+
+    // Enhanced lists separated by WorkOrderType
+    const DraftingLabors = ref<EnhancedLaborItem[]>([]);
+    const ProductionLabors = ref<EnhancedLaborItem[]>([]);
+    const InstallationLabors = ref<EnhancedLaborItem[]>([]);
+
     const IsLoadingLaborItems = ref(false);
 
-    const loadLaborItemsFromCache = (): boolean => {
+    // Load immutable API data from cache
+    const loadApiLaborsFromCache = (): boolean => {
       const cached = LaborItemsCache.load();
       if (cached) {
-        LaborItems.value = cached;
+        ApiLaborItems.value = cached;
         return true;
       }
       return false;
     };
 
-    const loadEnabledLaborsFromCache = (): void => {
-      const cached = EnabledLaborsCache.load();
-      if (cached) {
-        EnabledLaborIds.value = new Set(cached);
-      } else if (LaborItems.value) {
-        // Default: all items enabled
-        EnabledLaborIds.value = new Set(LaborItems.value.map((l) => l.LaborId));
+    // Load enhanced labor lists from cache
+    const loadEnhancedLaborsFromCache = (): void => {
+      try {
+        const drafting = localStorage.getItem(ENHANCED_DRAFTING_KEY);
+        const production = localStorage.getItem(ENHANCED_PRODUCTION_KEY);
+        const installation = localStorage.getItem(ENHANCED_INSTALLATION_KEY);
+
+        if (drafting)
+          DraftingLabors.value = JSON.parse(drafting) as EnhancedLaborItem[];
+        if (production)
+          ProductionLabors.value = JSON.parse(
+            production,
+          ) as EnhancedLaborItem[];
+        if (installation)
+          InstallationLabors.value = JSON.parse(
+            installation,
+          ) as EnhancedLaborItem[];
+      } catch (err) {
+        console.warn(
+          "[LaborsState] Failed to load enhanced labors from cache",
+          err,
+        );
       }
     };
 
-    const loadLaborOrderFromCache = (): void => {
-      const cached = LaborOrderCache.load();
-      if (cached && cached.length) {
-        LaborOrder.value = cached;
-      } else if (LaborItems.value) {
-        LaborOrder.value = LaborItems.value.map((l) => l.LaborId);
+    // Save enhanced labor lists to cache
+    const saveEnhancedLaborsToCache = (): void => {
+      try {
+        localStorage.setItem(
+          ENHANCED_DRAFTING_KEY,
+          JSON.stringify(DraftingLabors.value),
+        );
+        localStorage.setItem(
+          ENHANCED_PRODUCTION_KEY,
+          JSON.stringify(ProductionLabors.value),
+        );
+        localStorage.setItem(
+          ENHANCED_INSTALLATION_KEY,
+          JSON.stringify(InstallationLabors.value),
+        );
+      } catch (err) {
+        console.error(
+          "[LaborsState] Failed to save enhanced labors to cache",
+          err,
+        );
       }
     };
 
+    // Initialize enhanced labors from API data, separated by WorkOrderType
+    const initializeEnhancedLabors = (): void => {
+      if (!ApiLaborItems.value) return;
+
+      // Build existing maps for each type
+      const existingDrafting = new Map(
+        DraftingLabors.value.map((l) => [
+          l.LaborId,
+          { Sequence: l.Sequence, IsEnabled: l.IsEnabled },
+        ]),
+      );
+      const existingProduction = new Map(
+        ProductionLabors.value.map((l) => [
+          l.LaborId,
+          { Sequence: l.Sequence, IsEnabled: l.IsEnabled },
+        ]),
+      );
+      const existingInstallation = new Map(
+        InstallationLabors.value.map((l) => [
+          l.LaborId,
+          { Sequence: l.Sequence, IsEnabled: l.IsEnabled },
+        ]),
+      );
+
+      // Separate API items by WorkOrderType
+      const drafting: EnhancedLaborItem[] = [];
+      const production: EnhancedLaborItem[] = [];
+      const installation: EnhancedLaborItem[] = [];
+
+      ApiLaborItems.value.forEach((labor) => {
+        const existing =
+          labor.WorkOrderType === "Drafting"
+            ? existingDrafting.get(labor.LaborId)
+            : labor.WorkOrderType === "Production"
+              ? existingProduction.get(labor.LaborId)
+              : labor.WorkOrderType === "Installation"
+                ? existingInstallation.get(labor.LaborId)
+                : null;
+
+        const enhanced: EnhancedLaborItem = {
+          ...labor,
+          Sequence: existing?.Sequence ?? 0,
+          IsEnabled: existing?.IsEnabled ?? true,
+        };
+
+        if (labor.WorkOrderType === "Drafting") drafting.push(enhanced);
+        else if (labor.WorkOrderType === "Production")
+          production.push(enhanced);
+        else if (labor.WorkOrderType === "Installation")
+          installation.push(enhanced);
+      });
+
+      // Assign sequences for each list
+      drafting.forEach((l, i) => {
+        if (l.Sequence === 0) l.Sequence = i + 1;
+      });
+      production.forEach((l, i) => {
+        if (l.Sequence === 0) l.Sequence = i + 1;
+      });
+      installation.forEach((l, i) => {
+        if (l.Sequence === 0) l.Sequence = i + 1;
+      });
+
+      // Sort by sequence
+      drafting.sort((a, b) => a.Sequence - b.Sequence);
+      production.sort((a, b) => a.Sequence - b.Sequence);
+      installation.sort((a, b) => a.Sequence - b.Sequence);
+
+      DraftingLabors.value = drafting;
+      ProductionLabors.value = production;
+      InstallationLabors.value = installation;
+
+      saveEnhancedLaborsToCache();
+    };
+
+    // Load labor items from API
     const LoadLaborItems = async (): Promise<void> => {
       const key = (config$.Key ?? "").trim();
       if (!key) {
@@ -59,19 +179,17 @@ export const useLaborsAndOperationsState = defineStore(
       nrg.SetKey(key);
       try {
         const laborItems = await nrg.GetLaborItems();
-        LaborItems.value = laborItems;
+        ApiLaborItems.value = laborItems;
         LaborItemsCache.save(laborItems);
-        loadEnabledLaborsFromCache();
-        loadLaborOrderFromCache();
+        initializeEnhancedLabors();
         app$.setAppStatus("success", "Labor items loaded.");
       } catch (err) {
-        const fallbackUsed = loadLaborItemsFromCache();
+        const fallbackUsed = loadApiLaborsFromCache();
         const message =
           (err as Error)?.message ||
           (typeof err === "string" ? err : "Unknown error");
         if (fallbackUsed) {
-          loadEnabledLaborsFromCache();
-          loadLaborOrderFromCache();
+          initializeEnhancedLabors();
           app$.setAppStatus("error", "Labor items failed. Using cached data.");
         } else {
           app$.setAppStatus("error", `Labor items failed: ${message}`);
@@ -82,90 +200,110 @@ export const useLaborsAndOperationsState = defineStore(
       }
     };
 
+    // Helper to find labor in any list
+    const findLaborInList = (
+      laborId: string,
+    ): { list: EnhancedLaborItem[]; labor: EnhancedLaborItem } | null => {
+      let labor = DraftingLabors.value.find((l) => l.LaborId === laborId);
+      if (labor) return { list: DraftingLabors.value, labor };
+
+      labor = ProductionLabors.value.find((l) => l.LaborId === laborId);
+      if (labor) return { list: ProductionLabors.value, labor };
+
+      labor = InstallationLabors.value.find((l) => l.LaborId === laborId);
+      if (labor) return { list: InstallationLabors.value, labor };
+
+      return null;
+    };
+
+    // Toggle labor enabled state
     const ToggleLaborEnabled = (laborId: string): void => {
-      if (EnabledLaborIds.value.has(laborId)) {
-        EnabledLaborIds.value.delete(laborId);
-      } else {
-        EnabledLaborIds.value.add(laborId);
+      const found = findLaborInList(laborId);
+      if (found) {
+        found.labor.IsEnabled = !found.labor.IsEnabled;
+        saveEnhancedLaborsToCache();
       }
-      EnabledLaborsCache.save(Array.from(EnabledLaborIds.value));
     };
 
-    const IsLaborEnabled = (laborId: string): boolean => {
-      return EnabledLaborIds.value.has(laborId);
-    };
-
-    const SetAllLaborsEnabled = (enabled: boolean): void => {
-      if (enabled && LaborItems.value) {
-        EnabledLaborIds.value = new Set(LaborItems.value.map((l) => l.LaborId));
-      } else {
-        EnabledLaborIds.value.clear();
+    // Set all labors enabled/disabled for a specific type
+    const SetAllLaborsEnabled = (
+      enabled: boolean,
+      type?: "Drafting" | "Production" | "Installation",
+    ): void => {
+      if (!type || type === "Drafting") {
+        DraftingLabors.value.forEach((l) => (l.IsEnabled = enabled));
       }
-      EnabledLaborsCache.save(Array.from(EnabledLaborIds.value));
+      if (!type || type === "Production") {
+        ProductionLabors.value.forEach((l) => (l.IsEnabled = enabled));
+      }
+      if (!type || type === "Installation") {
+        InstallationLabors.value.forEach((l) => (l.IsEnabled = enabled));
+      }
+      saveEnhancedLaborsToCache();
     };
 
-    const SaveLaborOrder = (orderIds: string[]): void => {
-      LaborOrder.value = orderIds.slice();
-      LaborOrderCache.save(orderIds);
-    };
-
+    // Move labor up or down in sequence within its type list
     const MoveLabor = (laborId: string, direction: "up" | "down"): void => {
-      if (!LaborOrder.value) return;
-      const idx = LaborOrder.value.indexOf(laborId);
+      const found = findLaborInList(laborId);
+      if (!found) return;
+
+      const idx = found.list.findIndex((l) => l.LaborId === laborId);
       if (idx === -1) return;
+
       const swapWith = direction === "up" ? idx - 1 : idx + 1;
-      if (swapWith < 0 || swapWith >= LaborOrder.value.length) return;
-      // Defensive: ensure both indices are valid and defined
-      const newOrder = [...LaborOrder.value];
-      if (
-        typeof newOrder[idx] !== "string" ||
-        typeof newOrder[swapWith] !== "string"
-      ) {
-        return;
-      }
-      // Now both are string
-      const a: string = newOrder[idx]!;
-      const b: string = newOrder[swapWith]!;
-      newOrder[idx] = b;
-      newOrder[swapWith] = a;
-      SaveLaborOrder(newOrder);
+      if (swapWith < 0 || swapWith >= found.list.length) return;
+
+      const tmp = found.list[idx]!;
+      found.list[idx] = found.list[swapWith]!;
+      found.list[swapWith] = tmp;
+
+      // Update sequences
+      found.list.forEach((l, i) => (l.Sequence = i + 1));
+      saveEnhancedLaborsToCache();
     };
 
-    const OrderedLaborItems = () => {
-      if (!LaborItems.value) return [] as LaborItemDto[];
-      if (!LaborOrder.value) return LaborItems.value;
-      const byId = new Map(
-        LaborItems.value.map((l) => [l.LaborId, l] as const),
+    // Computed: All enhanced labors combined
+    const AllEnhancedLabors = computed(() => {
+      return [
+        ...DraftingLabors.value,
+        ...ProductionLabors.value,
+        ...InstallationLabors.value,
+      ];
+    });
+
+    // Computed: Only enabled labors
+    const EnabledLaborIds = computed(() => {
+      return new Set(
+        AllEnhancedLabors.value
+          .filter((l) => l.IsEnabled)
+          .map((l) => l.LaborId),
       );
-      const ordered: LaborItemDto[] = [];
-      for (const id of LaborOrder.value) {
-        const item = byId.get(id);
-        if (item) ordered.push(item);
-      }
-      // append any new items not in order yet
-      for (const item of LaborItems.value) {
-        if (!LaborOrder.value.includes(item.LaborId)) ordered.push(item);
-      }
-      return ordered;
-    };
+    });
 
     // Load from cache on init
-    loadLaborItemsFromCache();
-    loadEnabledLaborsFromCache();
-    loadLaborOrderFromCache();
+    loadApiLaborsFromCache();
+    loadEnhancedLaborsFromCache();
+    if (
+      ApiLaborItems.value &&
+      DraftingLabors.value.length === 0 &&
+      ProductionLabors.value.length === 0 &&
+      InstallationLabors.value.length === 0
+    ) {
+      initializeEnhancedLabors();
+    }
 
     return {
-      LaborItems,
+      ApiLaborItems,
+      DraftingLabors,
+      ProductionLabors,
+      InstallationLabors,
+      AllEnhancedLabors,
       EnabledLaborIds,
-      LaborOrder,
       IsLoadingLaborItems,
       LoadLaborItems,
       ToggleLaborEnabled,
-      IsLaborEnabled,
       SetAllLaborsEnabled,
-      SaveLaborOrder,
       MoveLabor,
-      OrderedLaborItems,
     };
   },
 );

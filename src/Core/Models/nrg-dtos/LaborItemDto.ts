@@ -15,7 +15,7 @@ export interface LaborItemDto {
   // GlAccount: string | null;
   // DebitGLAccount: string | null;
   Type: string | null;
-  WorkOrderType: string | null;
+  WorkOrderType: "Drafting" | "Production" | "Installation" | null;
   // Burdens: unknown[]; // placeholder for burden items if needed later
   HideInKiosk: boolean;
 }

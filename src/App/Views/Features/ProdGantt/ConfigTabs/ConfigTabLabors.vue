@@ -2,74 +2,97 @@
   <n-space vertical :size="24">
     <div class="labor-controls">
       <n-space>
-        <n-button @click="handleEnableAll">All On</n-button>
-        <n-button @click="handleDisableAll">All Off</n-button>
-        <n-button type="primary" @click="loadLabors" :loading="labors$.IsLoadingLaborItems">
+        <n-button @click="labors$.SetAllLaborsEnabled(true)">All On</n-button>
+        <n-button @click="labors$.SetAllLaborsEnabled(false)">All Off</n-button>
+        <n-button type="primary" @click="labors$.LoadLaborItems()" :loading="labors$.IsLoadingLaborItems">
           Refresh List
         </n-button>
       </n-space>
       <n-input v-model:value="searchQuery" placeholder="Search labor items..." clearable />
     </div>
 
-    <n-alert v-if="!labors$.LaborItems" type="info">
+    <n-alert v-if="labors$.AllEnhancedLabors.length === 0" type="info">
       No labor items loaded. Click "Refresh List" to load labor items from server.
     </n-alert>
 
-    <n-data-table v-else :columns="columns" :data="filteredLabors" :pagination="pagination" :bordered="false" />
+    <n-tabs v-else type="segment">
+      <n-tab-pane name="drafting" tab="Drafting">
+        <n-data-table :columns="columns" :data="filteredDrafting" :pagination="pagination" :bordered="false" />
+      </n-tab-pane>
+      <n-tab-pane name="production" tab="Production">
+        <n-data-table :columns="columns" :data="filteredProduction" :pagination="pagination" :bordered="false" />
+      </n-tab-pane>
+      <n-tab-pane name="installation" tab="Installation">
+        <n-data-table :columns="columns" :data="filteredInstallation" :pagination="pagination" :bordered="false" />
+      </n-tab-pane>
+    </n-tabs>
   </n-space>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, h, onMounted } from 'vue';
 import { NSwitch, NButton } from 'naive-ui';
-import { useLaborsAndOperationsState } from '@/Data/States/App/ProdGantt/labors-state';
+import { useLaborsAndOperationsState, type EnhancedLaborItem } from '@/Data/States/App/ProdGantt/labors-state';
 import type { DataTableColumns } from 'naive-ui';
-import type { LaborItemDto } from '@/Core/Models/nrg-dtos/LaborItemDto';
 
 const labors$ = useLaborsAndOperationsState();
 const searchQuery = ref('');
 
 const pagination = { pageSize: 20 };
 
-const filteredLabors = computed(() => {
-  const items = labors$.OrderedLaborItems ? labors$.OrderedLaborItems() : labors$.LaborItems || [];
+const filterList = (list: EnhancedLaborItem[]) => {
   const query = searchQuery.value.toLowerCase().trim();
-  if (!query) return items;
-  return items.filter((labor) => (
+  if (!query) return list;
+  return list.filter((labor) => (
     labor.Name?.toLowerCase().includes(query) ||
     labor.Department?.toLowerCase().includes(query) ||
     labor.Type?.toLowerCase().includes(query)
   ));
-});
+};
 
-const columns: DataTableColumns<LaborItemDto> = [
+const filteredDrafting = computed(() => filterList(labors$.DraftingLabors));
+const filteredProduction = computed(() => filterList(labors$.ProductionLabors));
+const filteredInstallation = computed(() => filterList(labors$.InstallationLabors));
+
+const getListForLabor = (laborId: string) => {
+  if (labors$.DraftingLabors.find(l => l.LaborId === laborId)) return labors$.DraftingLabors;
+  if (labors$.ProductionLabors.find(l => l.LaborId === laborId)) return labors$.ProductionLabors;
+  if (labors$.InstallationLabors.find(l => l.LaborId === laborId)) return labors$.InstallationLabors;
+  return [];
+};
+
+const columns: DataTableColumns<EnhancedLaborItem> = [
   {
     title: 'Order',
     key: 'order',
     width: 90,
-    render: (row) => [
-      h(NButton, {
-        size: 'small',
-        quaternary: true,
-        disabled: !canMove(row, 'up'),
-        onClick: () => moveRow(row, 'up'),
-        style: 'margin-right:4px;'
-      }, { default: () => '▲' }),
-      h(NButton, {
-        size: 'small',
-        quaternary: true,
-        disabled: !canMove(row, 'down'),
-        onClick: () => moveRow(row, 'down'),
-      }, { default: () => '▼' })
-    ]
+    render: (row) => {
+      const list = getListForLabor(row.LaborId);
+      const actualIdx = list.findIndex(l => l.LaborId === row.LaborId);
+      return [
+        h(NButton, {
+          size: 'small',
+          quaternary: true,
+          disabled: actualIdx === 0,
+          onClick: () => labors$.MoveLabor(row.LaborId, 'up'),
+          style: 'margin-right:4px;'
+        }, { default: () => '▲' }),
+        h(NButton, {
+          size: 'small',
+          quaternary: true,
+          disabled: actualIdx === list.length - 1,
+          onClick: () => labors$.MoveLabor(row.LaborId, 'down'),
+        }, { default: () => '▼' })
+      ];
+    }
   },
   {
-    title: 'I/O',
+    title: 'Enabled',
     key: 'enabled',
-    width: 80,
+    width: 100,
     render: (row) =>
       h(NSwitch, {
-        value: labors$.IsLaborEnabled(row.LaborId),
+        value: row.IsEnabled,
         onUpdateValue: () => labors$.ToggleLaborEnabled(row.LaborId),
       }),
   },
@@ -79,25 +102,25 @@ const columns: DataTableColumns<LaborItemDto> = [
   { title: 'Work Order Type', key: 'WorkOrderType', width: 150 },
 ];
 
-function canMove(row: LaborItemDto, dir: 'up' | 'down') {
-  const items = labors$.OrderedLaborItems ? labors$.OrderedLaborItems() : labors$.LaborItems || [];
-  const idx = items.findIndex(l => l.LaborId === row.LaborId);
-  if (dir === 'up') return idx > 0;
-  if (dir === 'down') return idx < items.length - 1;
-  return false;
-}
-
-function moveRow(row: LaborItemDto, dir: 'up' | 'down') {
-  labors$.MoveLabor(row.LaborId, dir);
-}
-
-const handleEnableAll = () => labors$.SetAllLaborsEnabled(true);
-const handleDisableAll = () => labors$.SetAllLaborsEnabled(false);
-const loadLabors = async () => { await labors$.LoadLaborItems(); };
-
 onMounted(async () => {
-  if (!labors$.LaborItems || labors$.LaborItems.length === 0) {
+  if (labors$.AllEnhancedLabors.length === 0) {
     await labors$.LoadLaborItems();
   }
 });
 </script>
+
+<style scoped>
+.labor-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+
+@media (max-width: 768px) {
+  .labor-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+</style>
