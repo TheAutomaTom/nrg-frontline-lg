@@ -1,6 +1,11 @@
 <template>
   <n-card title="Configuration">
-
+    <div>
+      <n-alert type="info" closable>
+        This tool has very limited access to server configuration. <br />
+        Manual workflow setup is required.
+      </n-alert>
+    </div>
 
     <n-tabs class="card-tabs" default-value="workflows" size="large" animated pane-wrapper-style="margin: 0 -4px"
       pane-style="padding-left: 4px; padding-right: 4px; box-sizing: border-box;">

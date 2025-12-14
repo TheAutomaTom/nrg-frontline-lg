@@ -1,9 +1,6 @@
 <template>
   <n-space vertical :size="24">
-    <n-alert type="info" closable>
-      Configure the default work week for all workflows. In the future, you'll be able to set unique schedules per
-      workflow.
-    </n-alert>
+
 
     <n-spin :show="workWeek$.IsLoadingWorkWeek">
       <div v-if="localWeek" class="week-config">
@@ -28,7 +25,7 @@
         </div>
 
         <div class="week-row">
-          <label class="week-label">Overtime Days</label>
+          <label class="week-label">Overtime Eligibile</label>
           <n-checkbox-group v-model:value="localWeek.WorkingDays.Overtime" @update:value="handleSave">
             <n-space>
               <n-checkbox v-for="day in allDays" :key="day" :value="day" :label="day" />

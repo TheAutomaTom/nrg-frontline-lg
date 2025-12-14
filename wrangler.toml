@@ -1,4 +1,4 @@
-name = "nrg-frontline-lg"
+name = "nrg-frontline-pg"
 main = "cloudflare/worker.js"
 compatibility_date = "2025-01-01"
 

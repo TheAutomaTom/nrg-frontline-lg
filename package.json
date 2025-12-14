@@ -1,6 +1,6 @@
 {
-  "name": "nrg-frontline",
-  "version": "0.0.0",
+  "name": "nrg-frontline-pg",
+  "version": "0.0.1",
   "private": true,
   "type": "module",
   "engines": {
