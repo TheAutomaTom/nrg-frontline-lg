@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from "vue-router";
 import { useAppState } from "@/Data/States/App/app-state";
 import DataRefresh from "@/App/Views/Home/DataRefresh.vue";
 import DataBackup from "@/App/Views/Home/DataBackup.vue";
+import ConfigWorkflows from "@/App/Views/Features/ProdGantt/ConfigWorkflows.vue";
 
 const routes = [
   {
@@ -15,10 +16,9 @@ const routes = [
     component: DataBackup,
   },
   {
-    path: "/lg-config-workflow",
-    name: "lg-config-workflow",
-    component: () =>
-      import("@/App/Views/Features/ProdGantt/ConfigWorkflow.vue"),
+    path: "/lg-config",
+    name: "lg-config",
+    component: ConfigWorkflows,
   },
 ];
 

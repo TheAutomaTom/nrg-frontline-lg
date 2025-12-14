@@ -32,6 +32,8 @@ import {
   NSwitch,
   NDialog,
   NIcon,
+  NTabs,
+  NTabPane,
 } from "naive-ui";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -66,6 +68,8 @@ export const naiveUiComponents: Array<{ component: any; name: string }> = [
   { component: NSwitch, name: "n-switch" },
   { component: NDialog, name: "n-dialog" },
   { component: NIcon, name: "n-icon" },
+  { component: NTabs, name: "n-tabs" },
+  { component: NTabPane, name: "n-tab-pane" },
 ];
 
 export const naiveConfig = {
