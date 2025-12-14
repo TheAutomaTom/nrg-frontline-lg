@@ -1,18 +1,16 @@
 <template>
-  <n-tab-pane name="workflows" tab="Workflows">
-    <div class="workflow-selector">
-      <n-select v-model:value="selectedWorkflowId" :options="workflowOptions" :loading="workflows$.IsLoadingWorkflows"
-        placeholder="Choose a workflow" clearable class="workflow-selector__select" />
+  <div class="workflow-selector">
+    <n-select v-model:value="selectedWorkflowId" :options="workflowOptions" :loading="workflows$.IsLoadingWorkflows"
+      placeholder="Choose a workflow" clearable class="workflow-selector__select" />
 
-      <n-alert type="info" class="text-sm workflow-selector__alert">
-        This tool requires manually configuring workflow steps.
-        <n-button v-if="selectedWorkflow?.Name === 'Primary Workflow'" size="small" @click="handleReset"
-          style="text-decoration: line-through;">
-          Reset to Default Workflow
-        </n-button>
-      </n-alert>
-    </div>
-  </n-tab-pane>
+    <n-alert type="info" class="text-sm workflow-selector__alert">
+      This tool requires manually configuring workflow steps.
+      <n-button v-if="selectedWorkflow?.Name === 'Primary Workflow'" size="small" @click="handleReset"
+        style="text-decoration: line-through;">
+        Reset to Default Workflow
+      </n-button>
+    </n-alert>
+  </div>
 </template>
 
 <script setup lang="ts">

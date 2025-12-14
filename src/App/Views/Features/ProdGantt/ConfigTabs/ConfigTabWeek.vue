@@ -1,52 +1,48 @@
 <template>
-  <n-tab-pane name="week" tab="Week">
-    <n-space vertical :size="24">
-      <n-alert type="info" closable>
-        Configure the default work week for all workflows. In the future, you'll be able to set unique schedules per
-        workflow.
-      </n-alert>
+  <n-space vertical :size="24">
+    <n-alert type="info" closable>
+      Configure the default work week for all workflows. In the future, you'll be able to set unique schedules per
+      workflow.
+    </n-alert>
 
-      <n-spin :show="workWeek$.IsLoadingWorkWeek">
-        <n-form v-if="localWeek" label-placement="left" label-width="140">
-          <n-form-item label="Hours Per Day">
-            <n-input-number v-model:value="localWeek.HoursPerDay" :min="0.5" :max="24" :step="0.5" @blur="handleSave" />
-          </n-form-item>
+    <n-spin :show="workWeek$.IsLoadingWorkWeek">
+      <div v-if="localWeek" class="week-config">
+        <div class="week-row">
+          <label class="week-label">Hours Per Day</label>
+          <n-input-number v-model:value="localWeek.HoursPerDay" :min="0.5" :max="24" :step="0.5" @blur="handleSave" />
+        </div>
 
-          <n-form-item label="Start of Day">
-            <n-time-picker v-model:formatted-value="localWeek.StartOfDay" format="HH:mm" value-format="HH:mm"
-              @blur="handleSave" />
-          </n-form-item>
+        <div class="week-row">
+          <label class="week-label">Start of Day</label>
+          <n-time-picker v-model:formatted-value="localWeek.StartOfDay" format="HH:mm" value-format="HH:mm"
+            @blur="handleSave" />
+        </div>
 
-          <n-form-item label="Typical Work Days">
-            <n-checkbox-group v-model:value="localWeek.WorkingDays.Typical" @update:value="handleSave">
-              <n-space>
-                <n-checkbox v-for="day in allDays" :key="day" :value="day" :label="day" />
-              </n-space>
-            </n-checkbox-group>
-          </n-form-item>
-
-          <n-form-item label="Overtime Days">
-            <n-checkbox-group v-model:value="localWeek.WorkingDays.Overtime" @update:value="handleSave">
-              <n-space>
-                <n-checkbox v-for="day in allDays" :key="day" :value="day" :label="day" />
-              </n-space>
-            </n-checkbox-group>
-          </n-form-item>
-
-          <n-form-item>
+        <div class="week-row">
+          <label class="week-label">Typical Work Days</label>
+          <n-checkbox-group v-model:value="localWeek.WorkingDays.Typical" @update:value="handleSave">
             <n-space>
-              <n-button type="primary" @click="handleSave">
-                Save Work Week
-              </n-button>
-              <n-button @click="handleReset">
-                Reset to Default
-              </n-button>
+              <n-checkbox v-for="day in allDays" :key="day" :value="day" :label="day" />
             </n-space>
-          </n-form-item>
-        </n-form>
-      </n-spin>
-    </n-space>
-  </n-tab-pane>
+          </n-checkbox-group>
+        </div>
+
+        <div class="week-row">
+          <label class="week-label">Overtime Days</label>
+          <n-checkbox-group v-model:value="localWeek.WorkingDays.Overtime" @update:value="handleSave">
+            <n-space>
+              <n-checkbox v-for="day in allDays" :key="day" :value="day" :label="day" />
+            </n-space>
+          </n-checkbox-group>
+        </div>
+
+        <n-space>
+          <n-button type="primary" @click="handleSave">Save Work Week</n-button>
+          <n-button @click="handleReset">Reset to Default</n-button>
+        </n-space>
+      </div>
+    </n-spin>
+  </n-space>
 </template>
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue';
@@ -89,4 +85,27 @@ watch(() => workWeek$.DefaultWorkWeek, () => {
 }, { deep: true });
 </script>
 
-<style scoped></style>
+<style scoped>
+.week-config {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.week-row {
+  display: grid;
+  grid-template-columns: 160px 1fr;
+  gap: 12px;
+  align-items: center;
+}
+
+.week-label {
+  color: var(--text-color);
+}
+
+@media (max-width: 640px) {
+  .week-row {
+    grid-template-columns: 1fr;
+  }
+}
+</style>

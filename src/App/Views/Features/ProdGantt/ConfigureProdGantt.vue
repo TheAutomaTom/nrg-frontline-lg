@@ -4,10 +4,16 @@
 
     <n-tabs class="card-tabs" default-value="workflows" size="large" animated pane-wrapper-style="margin: 0 -4px"
       pane-style="padding-left: 4px; padding-right: 4px; box-sizing: border-box;">
-      <n-tabs></n-tabs>
-      <ConfigTabWorkflows />
-      <ConfigTabWeek />
-      <ConfigTabLabors />
+
+      <n-tab-pane name="workflows" tab="Workflows">
+        <ConfigTabWorkflows />
+      </n-tab-pane>
+      <n-tab-pane name="week" tab="Week">
+        <ConfigTabWeek />
+      </n-tab-pane>
+      <n-tab-pane name="labors" tab="Labors">
+        <ConfigTabLabors />
+      </n-tab-pane>
 
     </n-tabs>
 
