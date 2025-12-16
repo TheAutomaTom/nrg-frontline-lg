@@ -16,6 +16,17 @@
         <n-tag v-if="filterDateValue" type="info" closable @close="clearFilter">
           {{ formatFilterDateRange() }}
         </n-tag>
+
+        <n-divider vertical />
+
+        <n-button-group>
+          <n-button @click="selectAll" size="small">Select All</n-button>
+          <n-button @click="deselectAll" size="small">Deselect All</n-button>
+        </n-button-group>
+
+        <n-button type="success" @click="saveSelectedProjects" :disabled="selectedCount === 0">
+          Save Selected ({{ selectedCount }})
+        </n-button>
       </n-space>
     </div>
 
@@ -34,10 +45,14 @@
         <n-card v-for="pww in workflows$.FilteredProjectsWithWorkOrders" :key="pww.project.Id" size="small" hoverable>
           <template #header>
             <n-space align="center" justify="space-between">
-              <div>
-                <n-text strong>{{ pww.project.Number }}</n-text>
-                <n-text style="margin-left: 12px;">{{ pww.project.Name }}</n-text>
-              </div>
+              <n-space align="center">
+                <n-checkbox :checked="selectedProjects.has(pww.project.Id)"
+                  @update:checked="() => toggleProjectSelection(pww.project.Id)" />
+                <div>
+                  <n-text strong>{{ pww.project.Number }}</n-text>
+                  <n-text style="margin-left: 12px;">{{ pww.project.Name }}</n-text>
+                </div>
+              </n-space>
               <n-tag type="success" size="small">
                 {{ pww.workOrders.length }} Work Order{{ pww.workOrders.length !== 1 ? 's' : '' }}
               </n-tag>
@@ -89,10 +104,15 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useWorkflowsState } from '@/Data/States/App/ProdGantt/workflows-state';
+import { useProdGanttState } from '@/Data/States/App/ProdGantt/prod-gantt-state';
 
 const workflows$ = useWorkflowsState();
+const prodGantt$ = useProdGanttState();
+
+// Local state for checkboxes
+const selectedProjects = ref<Set<string>>(new Set());
 
 // Date picker value (timestamp in milliseconds)
 const filterDateValue = ref<number | null>(null);
@@ -147,11 +167,41 @@ const getWorkOrderTypeColor = (type: string): 'default' | 'primary' | 'info' | '
   return typeMap[type] || 'default';
 };
 
+const toggleProjectSelection = (projectId: string): void => {
+  if (selectedProjects.value.has(projectId)) {
+    selectedProjects.value.delete(projectId);
+  } else {
+    selectedProjects.value.add(projectId);
+  }
+};
+
+const saveSelectedProjects = (): void => {
+  const projectIds = Array.from(selectedProjects.value);
+  prodGantt$.SaveSelectedProjects(projectIds);
+};
+
+const selectAll = (): void => {
+  workflows$.FilteredProjectsWithWorkOrders.forEach(pww => {
+    selectedProjects.value.add(pww.project.Id);
+  });
+};
+
+const deselectAll = (): void => {
+  selectedProjects.value.clear();
+};
+
+const selectedCount = computed(() => selectedProjects.value.size);
+
 onMounted(async () => {
   // Auto-load if no data exists
   if (workflows$.Projects.length === 0) {
     await workflows$.LoadProjectsWithWorkOrders();
   }
+
+  // Load previously selected projects
+  prodGantt$.SelectedProjectIds.forEach(id => {
+    selectedProjects.value.add(id);
+  });
 });
 </script>
 

@@ -59,6 +59,25 @@ export class NrgClient implements INrgClient {
     return (await res.json()) as LaborKanbanGridItemsDto;
   }
 
+  async GetLaborKanbanGridItemsByProjectNumber(
+    projectNumber: string,
+  ): Promise<LaborKanbanGridItemsDto> {
+    const url = `${this._urlGetLaborKanbanGridItems}?projectNumber=${encodeURIComponent(projectNumber)}`;
+    const res = await this.get(url);
+    if (res.ok) {
+      return (await res.json()) as LaborKanbanGridItemsDto;
+    } else {
+      let errorMsg = res.statusText;
+      try {
+        const errJson = await res.json();
+        errorMsg = errJson?.message || errorMsg;
+      } catch {
+        // Ignore if parsing error body fails
+      }
+      throw new Error(errorMsg);
+    }
+  }
+
   SetKey(pw: string): boolean {
     this.key = pw;
     return this.key == pw;

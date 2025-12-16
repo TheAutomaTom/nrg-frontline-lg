@@ -4,6 +4,7 @@ import { NrgClient } from "@/Data/Clients/NrgClient";
 import { useUserConfigState } from "../user-config-state";
 import { useAppState } from "../app-state";
 import type { LaborKanbanGridItemsDto } from "@/Core/Models/nrg-dtos/ProdGantt/Ticket";
+import { SelectedProjectsCache } from "@/Data/Caches/ProdGantt/SelectedProjectsCache";
 
 export const useProdGanttState = defineStore("ProdGanttState", () => {
   const app$ = useAppState();
@@ -12,6 +13,9 @@ export const useProdGanttState = defineStore("ProdGanttState", () => {
 
   const LaborKanbanGridItems = ref<LaborKanbanGridItemsDto | null>(null);
   const IsLoadingTickets = ref(false);
+
+  // Selected Projects State
+  const SelectedProjectIds = ref<string[]>([]);
 
   const LoadLaborKanbanGridItems = async (): Promise<void> => {
     const key = (config$.Key ?? "").trim();
@@ -41,9 +45,51 @@ export const useProdGanttState = defineStore("ProdGanttState", () => {
     }
   };
 
+  const LoadSelectedProjects = (): void => {
+    const cached = SelectedProjectsCache.load();
+    if (cached) {
+      SelectedProjectIds.value = cached;
+      console.log(
+        `[ProdGanttState] Loaded ${cached.length} selected projects from cache`,
+      );
+    }
+  };
+
+  const SaveSelectedProjects = (projectIds: string[]): void => {
+    SelectedProjectIds.value = projectIds;
+    SelectedProjectsCache.save(projectIds);
+    console.log(
+      `[ProdGanttState] Saved ${projectIds.length} selected projects`,
+    );
+  };
+
+  const ToggleProjectSelection = (projectId: string): void => {
+    const index = SelectedProjectIds.value.indexOf(projectId);
+    if (index > -1) {
+      SelectedProjectIds.value.splice(index, 1);
+    } else {
+      SelectedProjectIds.value.push(projectId);
+    }
+    SelectedProjectsCache.save(SelectedProjectIds.value);
+  };
+
+  const ClearSelectedProjects = (): void => {
+    SelectedProjectIds.value = [];
+    SelectedProjectsCache.clear();
+  };
+
+  // Load cached selected projects on initialization
+  LoadSelectedProjects();
+
   return {
     LaborKanbanGridItems,
     IsLoadingTickets,
     LoadLaborKanbanGridItems,
+    // Selected Projects
+    SelectedProjectIds,
+    SaveSelectedProjects,
+    ToggleProjectSelection,
+    ClearSelectedProjects,
+    LoadSelectedProjects,
   };
 });

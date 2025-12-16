@@ -14,6 +14,9 @@ export interface INrgClient {
   ): Promise<WorkOrderDto[]>;
   GetLaborItems(): Promise<LaborItemDto[]>;
   GetLaborKanbanGridItems(): Promise<LaborKanbanGridItemsDto>;
+  GetLaborKanbanGridItemsByProjectNumber(
+    projectNumber: string,
+  ): Promise<LaborKanbanGridItemsDto>;
   // GetDateManagementByMonth(year: number, month: number): Promise<DateManagementByMonthDto>;
   GetWorkflows(): Promise<WorkflowsDto>;
   GetOperations(): Promise<OperationDtos>;

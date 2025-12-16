@@ -38,6 +38,7 @@ import {
   NCheckboxGroup,
   NList,
   NListItem,
+  NButtonGroup,
 } from "naive-ui";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -78,6 +79,7 @@ export const naiveUiComponents: Array<{ component: any; name: string }> = [
   { component: NCheckboxGroup, name: "n-checkbox-group" },
   { component: NList, name: "n-list" },
   { component: NListItem, name: "n-list-item" },
+  { component: NButtonGroup, name: "n-button-group" },
 ];
 
 export const naiveConfig = {

@@ -19,9 +19,9 @@
       <span class="label hide-on-mobile">Project Picker</span>
     </n-button>
     <n-button class="footer-button" :class="{ 'highlight-active': routeName === 'pg-prod-gantt-data' }" size="small"
-      @click="goProdGanttData" aria-label="Prod Gantt Data">
-      <span class="icon">📊</span>
-      <span class="label hide-on-mobile">Prod Gantt Data</span>
+      @click="goProdGanttData" aria-label="Test">
+      <span class="icon">🧪</span>
+      <span class="label hide-on-mobile">Test</span>
     </n-button>
   </div>
 </template>
