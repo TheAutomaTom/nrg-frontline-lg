@@ -15,27 +15,25 @@
     <div v-if="selectedWorkflow">
       <n-card :title="`${selectedWorkflow.Name} Configuration`" size="small" :bordered="false">
         <template #header-extra>
-          <n-space :size="8">
-            <n-button size="small" @click="resetWorkflow(selectedWorkflow.Id)">
-              Reset
-            </n-button>
-            <n-button size="small" @click="addStepToWorkflow(selectedWorkflow.Id)">
-              + Add Step
-            </n-button>
-          </n-space>
+          <n-button size="small" @click="selectedWorkflow && resetWorkflow(selectedWorkflow.Id)">
+            Reset
+          </n-button>
         </template>
         <n-space vertical :size="12">
           <div v-for="(step, idx) in selectedWorkflowSteps" :key="step.Id" class="step-row">
             <hr />
             <n-flex :size="12" align="center">
-              <div style="width: 60px; text-align: center; font-weight: 500;">{{ idx + 1 }}</div>
+              <div style="width: 60px; text-align: center; font-weight: 500;">{{ getStepDisplayNumber(idx) }}</div>
               <div style="display: flex; flex-direction: column; gap: 2px;">
-                <n-button text size="tiny" :disabled="idx === 0"
-                  @click="moveStepInWorkflow(selectedWorkflow.Id, idx, 'up')" title="Move up">▲</n-button>
-                <n-button text size="tiny" :disabled="idx === selectedWorkflowSteps.length - 1"
-                  @click="moveStepInWorkflow(selectedWorkflow.Id, idx, 'down')" title="Move down">▼</n-button>
-
+                <n-button text size="tiny" :disabled="!canMoveUp(idx)"
+                  @click="selectedWorkflow && moveStepInWorkflow(selectedWorkflow.Id, idx, 'up')"
+                  title="Move up">▲</n-button>
+                <n-button text size="tiny" :disabled="!canMoveDown(idx)"
+                  @click="selectedWorkflow && moveStepInWorkflow(selectedWorkflow.Id, idx, 'down')"
+                  title="Move down">▼</n-button>
               </div>
+              <n-select v-model:value="step.WorkOrderType" :options="getAllowedTypesForStep(idx)" placeholder="Type"
+                style="width: 140px" @update:value="() => selectedWorkflow && enforceTypeOrder(selectedWorkflow.Id)" />
               <n-input-number v-model:value="step.TypicalDayCount" placeholder="Days" :min="1" :step="1" :precision="0"
                 style="width: 120px">
                 <template #suffix>
@@ -44,18 +42,24 @@
               </n-input-number>
               <n-input v-model:value="step.Name" placeholder="Step name" style="flex: 1; min-width: 200px"
                 class="step-name-input" />
-
-              <n-button text type="error" @click="removeStepFromWorkflow(selectedWorkflow.Id, idx)">✕</n-button>
+              <n-button text type="error"
+                @click="selectedWorkflow && removeStepFromWorkflow(selectedWorkflow.Id, idx)">✕</n-button>
               <n-select v-model:value="step.LaborItems" multiple filterable placeholder="Select labor items"
-                :options="enabledLaborOptions" style="min-width: 240px" />
+                :options="getFilteredLaborOptions(step.WorkOrderType)" style="min-width: 240px" />
             </n-flex>
           </div>
           <n-text v-if="selectedWorkflowSteps.length === 0" depth="3" class="text-sm italic">
             No steps configured. Click "+ Add Step" to begin.
           </n-text>
         </n-space>
-        <n-button type="primary" style="margin-top: 16px;" @click="saveWorkflowSteps(selectedWorkflow.Id)">Save
-          Steps</n-button>
+        <n-space justify="space-between" style="margin-top: 16px;">
+          <n-button @click="selectedWorkflow && addStepToWorkflow(selectedWorkflow.Id)">
+            + Add Step
+          </n-button>
+          <n-button type="primary" @click="selectedWorkflow && saveWorkflowSteps(selectedWorkflow.Id)">
+            Save Steps
+          </n-button>
+        </n-space>
       </n-card>
     </div>
   </n-space>
@@ -81,12 +85,105 @@ const workflowOptions = computed(() => {
   }));
 });
 
+const workOrderTypeOptions = [
+  { label: 'Drafting', value: 'Drafting' as const },
+  { label: 'Production', value: 'Production' as const },
+  { label: 'Installation', value: 'Installation' as const },
+];
+
 const enabledLaborOptions = computed(() => {
   return labors$.AllEnhancedLabors.filter(l => l.IsEnabled).map(l => ({
     label: l.Name,
     value: l,
   }));
 });
+
+function getFilteredLaborOptions(workOrderType: "Drafting" | "Production" | "Installation") {
+  return labors$.AllEnhancedLabors
+    .filter(l => l.IsEnabled && l.WorkOrderType === workOrderType)
+    .map(l => ({ label: l.Name, value: l }));
+}
+
+function getAllowedTypesForStep(idx: number) {
+  const typeOrder = ['Drafting', 'Production', 'Installation'];
+  const steps = selectedWorkflowSteps.value;
+
+  let minType = 0; // Drafting
+  let maxType = 2; // Installation
+
+  // Check previous step
+  if (idx > 0) {
+    const prevType = steps[idx - 1]?.WorkOrderType;
+    if (prevType) {
+      minType = typeOrder.indexOf(prevType);
+    }
+  }
+
+  // Check next step
+  if (idx < steps.length - 1) {
+    const nextType = steps[idx + 1]?.WorkOrderType;
+    if (nextType) {
+      maxType = typeOrder.indexOf(nextType);
+    }
+  }
+
+  return workOrderTypeOptions.filter((opt, i) => i >= minType && i <= maxType);
+}
+
+function enforceTypeOrder(workflowId: string | null) {
+  if (!workflowId) return;
+  const steps = workflows$.WorkflowStepsMap[workflowId] || [];
+  const typeOrder = ['Drafting', 'Production', 'Installation'];
+
+  // Check each step and adjust if it violates order
+  for (let i = 1; i < steps.length; i++) {
+    const prevTypeIdx = typeOrder.indexOf(steps[i - 1]!.WorkOrderType);
+    const currTypeIdx = typeOrder.indexOf(steps[i]!.WorkOrderType);
+
+    if (currTypeIdx < prevTypeIdx) {
+      // Current step type is earlier than previous, adjust it
+      steps[i]!.WorkOrderType = steps[i - 1]!.WorkOrderType;
+      steps[i]!.LaborItems = []; // Clear incompatible labor items
+    }
+  }
+
+  workflows$.WorkflowStepsMap[workflowId] = steps;
+}
+
+function getStepDisplayNumber(idx: number): string {
+  const step = selectedWorkflowSteps.value[idx];
+  if (!step) return `${idx + 1}`;
+
+  let typeSeq = 1;
+  for (let i = 0; i < idx; i++) {
+    if (selectedWorkflowSteps.value[i]?.WorkOrderType === step.WorkOrderType) {
+      typeSeq++;
+    }
+  }
+
+  const typePrefix = step.WorkOrderType[0]; // D, P, or I
+  return `${typePrefix}${typeSeq}`;
+}
+
+function canMoveUp(idx: number): boolean {
+  if (idx === 0) return false;
+  const step = selectedWorkflowSteps.value[idx];
+  const prevStep = selectedWorkflowSteps.value[idx - 1];
+  if (!step || !prevStep) return false;
+
+  // Can only move within same WorkOrderType
+  return step.WorkOrderType === prevStep.WorkOrderType;
+}
+
+function canMoveDown(idx: number): boolean {
+  if (idx === selectedWorkflowSteps.value.length - 1) return false;
+  const step = selectedWorkflowSteps.value[idx];
+  const nextStep = selectedWorkflowSteps.value[idx + 1];
+  if (!step || !nextStep) return false;
+
+  // Can only move within same WorkOrderType
+  return step.WorkOrderType === nextStep.WorkOrderType;
+}
 
 const selectedWorkflow = computed(() => {
   if (!selectedWorkflowId.value || !workflows$.Workflows) return null;
@@ -114,15 +211,51 @@ watch(
   { immediate: true }
 );
 
+// Remove disabled labor items from workflow steps
+watch(
+  () => labors$.AllEnhancedLabors,
+  () => {
+    removeDisabledLaborsFromWorkflows();
+  },
+  { deep: true }
+);
+
+function removeDisabledLaborsFromWorkflows() {
+  if (!workflows$.WorkflowStepsMap) return;
+
+  const enabledLaborIds = new Set(
+    labors$.AllEnhancedLabors
+      .filter(l => l.IsEnabled)
+      .map(l => l.LaborId)
+  );
+
+  Object.keys(workflows$.WorkflowStepsMap).forEach(workflowId => {
+    const steps = workflows$.WorkflowStepsMap[workflowId];
+    if (!steps) return;
+
+    steps.forEach(step => {
+      if (step.LaborItems && step.LaborItems.length > 0) {
+        step.LaborItems = step.LaborItems.filter(labor =>
+          enabledLaborIds.has(labor.LaborId)
+        );
+      }
+    });
+  });
+}
+
 
 
 // --- Workflow Step Management Functions ---
 function addStepToWorkflow(workflowId: string) {
   const steps = workflows$.WorkflowStepsMap[workflowId] || [];
+  const lastStep = steps[steps.length - 1];
+  const defaultType = lastStep?.WorkOrderType || 'Drafting';
+
   steps.push({
     Id: generateGuid(),
     Name: '',
-    Sequence: steps.length + 1,
+    WorkOrderType: defaultType,
+    Sequence: 1,
     TypicalDayCount: 1,
     LaborItems: [],
   });
@@ -136,6 +269,7 @@ function removeStepFromWorkflow(workflowId: string, idx: number) {
     steps.push({
       Id: generateGuid(),
       Name: '',
+      WorkOrderType: 'Drafting',
       Sequence: 1,
       TypicalDayCount: 1,
       LaborItems: [],
@@ -159,6 +293,7 @@ function resetWorkflow(workflowId: string) {
     {
       Id: generateGuid(),
       Name: '',
+      WorkOrderType: 'Drafting',
       Sequence: 1,
       TypicalDayCount: 1,
       LaborItems: [],
@@ -168,8 +303,25 @@ function resetWorkflow(workflowId: string) {
 
 function saveWorkflowSteps(workflowId: string) {
   const steps = workflows$.WorkflowStepsMap[workflowId] || [];
-  // Re-sequence steps
-  steps.forEach((s, i) => (s.Sequence = i + 1));
+
+  // Sort by WorkOrderType order, then re-sequence within each type
+  const typeOrder = ['Drafting', 'Production', 'Installation'];
+  steps.sort((a, b) => typeOrder.indexOf(a.WorkOrderType) - typeOrder.indexOf(b.WorkOrderType));
+
+  // Re-sequence within each WorkOrderType
+  let currentType: string | null = null;
+  let typeSequence = 0;
+
+  steps.forEach((s) => {
+    if (s.WorkOrderType !== currentType) {
+      currentType = s.WorkOrderType;
+      typeSequence = 1;
+    } else {
+      typeSequence++;
+    }
+    s.Sequence = typeSequence;
+  });
+
   workflows$.WorkflowStepsMap[workflowId] = steps;
   // TODO: Persist to cache or backend
   console.log('Saved workflow steps for', workflowId, steps);

@@ -28,6 +28,7 @@ export const useWorkflowsState = defineStore("WorkflowsState", () => {
           {
             Id: generateGuid(),
             Name: "",
+            WorkOrderType: "Drafting",
             Sequence: 1,
             TypicalDayCount: 1,
             LaborItems: [],
