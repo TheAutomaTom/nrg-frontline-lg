@@ -3,6 +3,7 @@ import { useAppState } from "@/Data/States/App/app-state";
 import DataRefresh from "@/App/Views/Home/DataRefresh.vue";
 import DataBackup from "@/App/Views/Home/DataBackup.vue";
 import ConfigureProdGantt from "@/App/Views/Features/ProdGantt/ConfigureProdGantt.vue";
+import ProdGanttData from "@/App/Views/Features/ProdGantt/ProdGanttData.vue";
 
 const routes = [
   {
@@ -16,9 +17,14 @@ const routes = [
     component: DataBackup,
   },
   {
-    path: "/lg-config",
-    name: "lg-config",
+    path: "/pg-config",
+    name: "pg-config",
     component: ConfigureProdGantt,
+  },
+  {
+    path: "/pg-prod-gantt-data",
+    name: "pg-prod-gantt-data",
+    component: ProdGanttData,
   },
 ];
 

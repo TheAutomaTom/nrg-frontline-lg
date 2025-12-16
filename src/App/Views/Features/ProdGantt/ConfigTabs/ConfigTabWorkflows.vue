@@ -35,17 +35,18 @@
               <n-select v-model:value="step.WorkOrderType" :options="getAllowedTypesForStep(idx)" placeholder="Type"
                 style="width: 140px" @update:value="() => selectedWorkflow && enforceTypeOrder(selectedWorkflow.Id)" />
               <n-input-number v-model:value="step.TypicalDayCount" placeholder="Days" :min="1" :step="1" :precision="0"
-                style="width: 120px">
+                style="width: 120px" @update:value="workflows$.SaveWorkflowSteps()">
                 <template #suffix>
                   day(s)
                 </template>
               </n-input-number>
               <n-input v-model:value="step.Name" placeholder="Step name" style="flex: 1; min-width: 200px"
-                class="step-name-input" />
+                class="step-name-input" @blur="workflows$.SaveWorkflowSteps()" />
               <n-button text type="error"
                 @click="selectedWorkflow && removeStepFromWorkflow(selectedWorkflow.Id, idx)">✕</n-button>
               <n-select v-model:value="step.LaborItems" multiple filterable placeholder="Select labor items"
-                :options="getFilteredLaborOptions(step.WorkOrderType)" style="min-width: 240px" />
+                :options="getFilteredLaborOptions(step.WorkOrderType)" style="min-width: 240px"
+                @update:value="workflows$.SaveWorkflowSteps()" />
             </n-flex>
           </div>
           <n-text v-if="selectedWorkflowSteps.length === 0" depth="3" class="text-sm italic">
@@ -148,6 +149,7 @@ function enforceTypeOrder(workflowId: string | null) {
   }
 
   workflows$.WorkflowStepsMap[workflowId] = steps;
+  workflows$.SaveWorkflowSteps();
 }
 
 function getStepDisplayNumber(idx: number): string {
@@ -229,18 +231,27 @@ function removeDisabledLaborsFromWorkflows() {
       .map(l => l.LaborId)
   );
 
+  let hasChanges = false;
   Object.keys(workflows$.WorkflowStepsMap).forEach(workflowId => {
     const steps = workflows$.WorkflowStepsMap[workflowId];
     if (!steps) return;
 
     steps.forEach(step => {
       if (step.LaborItems && step.LaborItems.length > 0) {
+        const originalLength = step.LaborItems.length;
         step.LaborItems = step.LaborItems.filter(labor =>
           enabledLaborIds.has(labor.LaborId)
         );
+        if (step.LaborItems.length !== originalLength) {
+          hasChanges = true;
+        }
       }
     });
   });
+
+  if (hasChanges) {
+    workflows$.SaveWorkflowSteps();
+  }
 }
 
 
@@ -260,6 +271,7 @@ function addStepToWorkflow(workflowId: string) {
     LaborItems: [],
   });
   workflows$.WorkflowStepsMap[workflowId] = steps;
+  workflows$.SaveWorkflowSteps();
 }
 
 function removeStepFromWorkflow(workflowId: string, idx: number) {
@@ -276,6 +288,7 @@ function removeStepFromWorkflow(workflowId: string, idx: number) {
     });
   }
   workflows$.WorkflowStepsMap[workflowId] = steps;
+  workflows$.SaveWorkflowSteps();
 }
 
 function moveStepInWorkflow(workflowId: string, idx: number, dir: 'up' | 'down') {
@@ -286,6 +299,7 @@ function moveStepInWorkflow(workflowId: string, idx: number, dir: 'up' | 'down')
   steps[idx] = steps[swapWith]!;
   steps[swapWith] = tmp;
   workflows$.WorkflowStepsMap[workflowId] = steps;
+  workflows$.SaveWorkflowSteps();
 }
 
 function resetWorkflow(workflowId: string) {
@@ -299,6 +313,7 @@ function resetWorkflow(workflowId: string) {
       LaborItems: [],
     },
   ];
+  workflows$.SaveWorkflowSteps();
 }
 
 function saveWorkflowSteps(workflowId: string) {
@@ -323,7 +338,7 @@ function saveWorkflowSteps(workflowId: string) {
   });
 
   workflows$.WorkflowStepsMap[workflowId] = steps;
-  // TODO: Persist to cache or backend
+  workflows$.SaveWorkflowSteps();
   console.log('Saved workflow steps for', workflowId, steps);
 }
 </script>

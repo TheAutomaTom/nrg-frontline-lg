@@ -8,10 +8,15 @@
     </n-button>
 -->
 
-    <n-button class="footer-button" :class="{ 'highlight-active': routeName === 'lg-config' }" size="small"
+    <n-button class="footer-button" :class="{ 'highlight-active': routeName === 'pg-config' }" size="small"
       @click="goConfigureProdGantt" aria-label="Config Workflow">
       <span class="icon">⚙️</span>
       <span class="label hide-on-mobile">Config Workflow</span>
+    </n-button>
+    <n-button class="footer-button" :class="{ 'highlight-active': routeName === 'pg-prod-gantt-data' }" size="small"
+      @click="goProdGanttData" aria-label="Prod Gantt Data">
+      <span class="icon">📊</span>
+      <span class="label hide-on-mobile">Prod Gantt Data</span>
     </n-button>
   </div>
 </template>
@@ -25,7 +30,8 @@ const route = useRoute();
 
 const routeName = computed(() => route?.name as string | undefined);
 
-const goConfigureProdGantt = () => router.push({ name: 'lg-config' });
+const goConfigureProdGantt = () => router.push({ name: 'pg-config' });
+const goProdGanttData = () => router.push({ name: 'pg-prod-gantt-data' });
 </script>
 
 <style scoped>

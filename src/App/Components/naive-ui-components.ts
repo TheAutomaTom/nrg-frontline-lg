@@ -36,6 +36,8 @@ import {
   NTabPane,
   NDataTable,
   NCheckboxGroup,
+  NList,
+  NListItem,
 } from "naive-ui";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -74,6 +76,8 @@ export const naiveUiComponents: Array<{ component: any; name: string }> = [
   { component: NTabPane, name: "n-tab-pane" },
   { component: NDataTable, name: "n-data-table" },
   { component: NCheckboxGroup, name: "n-checkbox-group" },
+  { component: NList, name: "n-list" },
+  { component: NListItem, name: "n-list-item" },
 ];
 
 export const naiveConfig = {
