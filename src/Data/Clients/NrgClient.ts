@@ -17,6 +17,7 @@ import type {
   ProjectDto,
   ProjectDtosChunked,
 } from "@/Core/Models/nrg-dtos/Project/ProjectDto";
+import type { LaborKanbanGridItemsDto } from "@/Core/Models/nrg-dtos/ProdGantt/Ticket";
 
 export class NrgClient implements INrgClient {
   _apiUrlBase: string;
@@ -53,8 +54,9 @@ export class NrgClient implements INrgClient {
       this._apiUrlBase = norm(base) + proxyTag;
     }
   }
-  GetLaborKanbanGridItems(): Promise<MesLaborGridResponseDto> {
-    throw new Error("Method not implemented.");
+  async GetLaborKanbanGridItems(): Promise<LaborKanbanGridItemsDto> {
+    const res = await this.get(this._urlGetLaborKanbanGridItems);
+    return (await res.json()) as LaborKanbanGridItemsDto;
   }
 
   SetKey(pw: string): boolean {

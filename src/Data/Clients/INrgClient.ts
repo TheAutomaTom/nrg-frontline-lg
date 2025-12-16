@@ -4,6 +4,7 @@ import type { MesLaborGridResponseDto } from "../../Core/Models/nrg-dtos/MesLabo
 // import type { DateManagementByMonthDto } from "../../Core/Models/nrg-dtos/DateManagementByMonth";
 import type { WorkflowsDto } from "../../Core/Models/nrg-dtos/WorkflowDto";
 import type { OperationDtos } from "@/Core/Models/nrg-dtos/Operation/OperationDto";
+import type { LaborKanbanGridItemsDto } from "@/Core/Models/nrg-dtos/ProdGantt/Ticket";
 
 export interface INrgClient {
   GetWorkOrders(
@@ -12,7 +13,7 @@ export interface INrgClient {
     timezone: number,
   ): Promise<WorkOrderDto[]>;
   GetLaborItems(): Promise<LaborItemDto[]>;
-  GetLaborKanbanGridItems(): Promise<MesLaborGridResponseDto>;
+  GetLaborKanbanGridItems(): Promise<LaborKanbanGridItemsDto>;
   // GetDateManagementByMonth(year: number, month: number): Promise<DateManagementByMonthDto>;
   GetWorkflows(): Promise<WorkflowsDto>;
   GetOperations(): Promise<OperationDtos>;
