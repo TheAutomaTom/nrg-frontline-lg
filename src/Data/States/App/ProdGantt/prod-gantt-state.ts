@@ -14,8 +14,8 @@ export const useProdGanttState = defineStore("ProdGanttState", () => {
   const LaborKanbanGridItems = ref<LaborKanbanGridItemsDto | null>(null);
   const IsLoadingTickets = ref(false);
 
-  // Selected Projects State
-  const SelectedProjectIds = ref<string[]>([]);
+  // Selected Projects State (stores project numbers, not IDs)
+  const SelectedProjectNumbers = ref<string[]>([]);
 
   const LoadLaborKanbanGridItems = async (): Promise<void> => {
     const key = (config$.Key ?? "").trim();
@@ -26,14 +26,44 @@ export const useProdGanttState = defineStore("ProdGanttState", () => {
       );
       return;
     }
+
+    // Check if we have selected projects
+    if (SelectedProjectNumbers.value.length === 0) {
+      app$.setAppStatus(
+        "error",
+        "No projects selected. Please select projects first.",
+      );
+      return;
+    }
+
     app$.showLoading();
     IsLoadingTickets.value = true;
     nrg.SetKey(key);
 
     try {
-      const data = await nrg.GetLaborKanbanGridItems();
-      LaborKanbanGridItems.value = data;
-      app$.setAppStatus("success", "Labor kanban grid items loaded from API.");
+      console.log(
+        `[ProdGanttState] Loading data for ${SelectedProjectNumbers.value.length} selected projects...`,
+      );
+
+      // Load data for each selected project individually
+      const promises = SelectedProjectNumbers.value.map((projectNumber) =>
+        nrg.GetLaborKanbanGridItemsByProjectNumber(projectNumber),
+      );
+
+      const results = await Promise.all(promises);
+
+      // Merge all results into a single LaborKanbanGridItemsDto
+      const mergedItems = results.flatMap((result) => result.Items || []);
+
+      LaborKanbanGridItems.value = {
+        CreateDate: new Date().toISOString(),
+        Items: mergedItems,
+      };
+
+      app$.setAppStatus(
+        "success",
+        `Loaded ${mergedItems.length} labor items from ${SelectedProjectNumbers.value.length} project(s).`,
+      );
     } catch (err) {
       const message =
         (err as Error)?.message ||
@@ -48,33 +78,33 @@ export const useProdGanttState = defineStore("ProdGanttState", () => {
   const LoadSelectedProjects = (): void => {
     const cached = SelectedProjectsCache.load();
     if (cached) {
-      SelectedProjectIds.value = cached;
+      SelectedProjectNumbers.value = cached;
       console.log(
-        `[ProdGanttState] Loaded ${cached.length} selected projects from cache`,
+        `[ProdGanttState] Loaded ${cached.length} selected project numbers from cache`,
       );
     }
   };
 
-  const SaveSelectedProjects = (projectIds: string[]): void => {
-    SelectedProjectIds.value = projectIds;
-    SelectedProjectsCache.save(projectIds);
+  const SaveSelectedProjects = (projectNumbers: string[]): void => {
+    SelectedProjectNumbers.value = projectNumbers;
+    SelectedProjectsCache.save(projectNumbers);
     console.log(
-      `[ProdGanttState] Saved ${projectIds.length} selected projects`,
+      `[ProdGanttState] Saved ${projectNumbers.length} selected project numbers`,
     );
   };
 
-  const ToggleProjectSelection = (projectId: string): void => {
-    const index = SelectedProjectIds.value.indexOf(projectId);
+  const ToggleProjectSelection = (projectNumber: string): void => {
+    const index = SelectedProjectNumbers.value.indexOf(projectNumber);
     if (index > -1) {
-      SelectedProjectIds.value.splice(index, 1);
+      SelectedProjectNumbers.value.splice(index, 1);
     } else {
-      SelectedProjectIds.value.push(projectId);
+      SelectedProjectNumbers.value.push(projectNumber);
     }
-    SelectedProjectsCache.save(SelectedProjectIds.value);
+    SelectedProjectsCache.save(SelectedProjectNumbers.value);
   };
 
   const ClearSelectedProjects = (): void => {
-    SelectedProjectIds.value = [];
+    SelectedProjectNumbers.value = [];
     SelectedProjectsCache.clear();
   };
 
@@ -85,8 +115,8 @@ export const useProdGanttState = defineStore("ProdGanttState", () => {
     LaborKanbanGridItems,
     IsLoadingTickets,
     LoadLaborKanbanGridItems,
-    // Selected Projects
-    SelectedProjectIds,
+    // Selected Projects (by project number)
+    SelectedProjectNumbers,
     SaveSelectedProjects,
     ToggleProjectSelection,
     ClearSelectedProjects,

@@ -6,6 +6,19 @@
           :loading="workflows$.IsLoadingProjects">
           Load Projects
         </n-button>
+        
+        <n-input 
+          v-model:value="searchQuery" 
+          placeholder="Search projects..." 
+          clearable
+          style="width: 250px;"
+        >
+          <template #prefix>
+            <n-icon>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="currentColor" d="M15.5 14h-.79l-.28-.27a6.5 6.5 0 0 0 1.48-5.34c-.47-2.78-2.79-5-5.59-5.34a6.505 6.505 0 0 0-7.27 7.27c.34 2.8 2.56 5.12 5.34 5.59a6.5 6.5 0 0 0 5.34-1.48l.27.28v.79l4.25 4.25c.41.41 1.08.41 1.49 0c.41-.41.41-1.08 0-1.49L15.5 14zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5S14 7.01 14 9.5S11.99 14 9.5 14z"/></svg>
+            </n-icon>
+          </template>
+        </n-input>
 
         <n-divider vertical />
 
@@ -42,12 +55,12 @@
 
     <template v-else>
       <n-space vertical>
-        <n-card v-for="pww in workflows$.FilteredProjectsWithWorkOrders" :key="pww.project.Id" size="small" hoverable>
+        <n-card v-for="pww in searchFilteredProjects" :key="pww.project.Id" size="small" hoverable>
           <template #header>
             <n-space align="center" justify="space-between">
               <n-space align="center">
-                <n-checkbox :checked="selectedProjects.has(pww.project.Id)"
-                  @update:checked="() => toggleProjectSelection(pww.project.Id)" />
+                <n-checkbox :checked="selectedProjects.has(pww.project.Number ?? '')"
+                  @update:checked="() => toggleProjectSelection(pww.project.Number ?? '')" />
                 <div>
                   <n-text strong>{{ pww.project.Number }}</n-text>
                   <n-text style="margin-left: 12px;">{{ pww.project.Name }}</n-text>
@@ -111,11 +124,14 @@ import { useProdGanttState } from '@/Data/States/App/ProdGantt/prod-gantt-state'
 const workflows$ = useWorkflowsState();
 const prodGantt$ = useProdGanttState();
 
-// Local state for checkboxes
+// Local state for checkboxes (stores project numbers)
 const selectedProjects = ref<Set<string>>(new Set());
 
 // Date picker value (timestamp in milliseconds)
 const filterDateValue = ref<number | null>(null);
+
+// Search query for filtering projects
+const searchQuery = ref('');
 
 // Disable past dates
 const isDateDisabled = (ts: number): boolean => {
@@ -167,22 +183,24 @@ const getWorkOrderTypeColor = (type: string): 'default' | 'primary' | 'info' | '
   return typeMap[type] || 'default';
 };
 
-const toggleProjectSelection = (projectId: string): void => {
-  if (selectedProjects.value.has(projectId)) {
-    selectedProjects.value.delete(projectId);
+const toggleProjectSelection = (projectNumber: string): void => {
+  if (selectedProjects.value.has(projectNumber)) {
+    selectedProjects.value.delete(projectNumber);
   } else {
-    selectedProjects.value.add(projectId);
+    selectedProjects.value.add(projectNumber);
   }
 };
 
 const saveSelectedProjects = (): void => {
-  const projectIds = Array.from(selectedProjects.value);
-  prodGantt$.SaveSelectedProjects(projectIds);
+  const projectNumbers = Array.from(selectedProjects.value);
+  prodGantt$.SaveSelectedProjects(projectNumbers);
 };
 
 const selectAll = (): void => {
-  workflows$.FilteredProjectsWithWorkOrders.forEach(pww => {
-    selectedProjects.value.add(pww.project.Id);
+  searchFilteredProjects.value.forEach(pww => {
+    if (pww.project.Number) {
+      selectedProjects.value.add(pww.project.Number);
+    }
   });
 };
 
@@ -192,15 +210,29 @@ const deselectAll = (): void => {
 
 const selectedCount = computed(() => selectedProjects.value.size);
 
+// Filter projects by search query (number or name)
+const searchFilteredProjects = computed(() => {
+  const query = searchQuery.value.toLowerCase().trim();
+  if (!query) {
+    return workflows$.FilteredProjectsWithWorkOrders;
+  }
+  
+  return workflows$.FilteredProjectsWithWorkOrders.filter(pww => {
+    const number = pww.project.Number?.toLowerCase() || '';
+    const name = pww.project.Name?.toLowerCase() || '';
+    return number.includes(query) || name.includes(query);
+  });
+});
+
 onMounted(async () => {
   // Auto-load if no data exists
   if (workflows$.Projects.length === 0) {
     await workflows$.LoadProjectsWithWorkOrders();
   }
 
-  // Load previously selected projects
-  prodGantt$.SelectedProjectIds.forEach(id => {
-    selectedProjects.value.add(id);
+  // Load previously selected project numbers
+  prodGantt$.SelectedProjectNumbers.forEach(number => {
+    selectedProjects.value.add(number);
   });
 });
 </script>

@@ -2,12 +2,12 @@ export class SelectedProjectsCache {
   private static readonly STORAGE_KEY = "nrg-frontline-selected-projects";
   private static readonly TIMESTAMP_KEY = "nrg-frontline-selected-projects-ts";
 
-  static save(projectIds: string[]): void {
+  static save(projectNumbers: string[]): void {
     try {
-      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(projectIds));
+      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(projectNumbers));
       localStorage.setItem(this.TIMESTAMP_KEY, new Date().toISOString());
       console.log(
-        `[SelectedProjectsCache] Cached ${projectIds.length} selected projects`,
+        `[SelectedProjectsCache] Cached ${projectNumbers.length} selected project numbers`,
       );
     } catch (error) {
       console.error(
@@ -21,11 +21,11 @@ export class SelectedProjectsCache {
     try {
       const raw = localStorage.getItem(this.STORAGE_KEY);
       if (!raw) return null;
-      const projectIds = JSON.parse(raw) as string[];
-      return Array.isArray(projectIds) ? projectIds : null;
+      const projectNumbers = JSON.parse(raw) as string[];
+      return Array.isArray(projectNumbers) ? projectNumbers : null;
     } catch (error) {
       console.error(
-        "[SelectedProjectsCache] Failed to load selected projects from cache:",
+        "[SelectedProjectsCache] Failed to load selected project numbers from cache:",
         error,
       );
       return null;

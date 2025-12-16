@@ -1,11 +1,17 @@
 <template>
   <n-space vertical :size="24">
-    <n-alert v-if="!prodGantt$.LaborKanbanGridItems" type="info" title="No Data">
-      Click the button below to load production gantt data.
+    <n-alert v-if="prodGantt$.SelectedProjectNumbers.length === 0" type="warning" title="No Projects Selected">
+      Please go to the "Project Picker" tab and select projects before loading production data.
     </n-alert>
 
-    <n-button type="primary" :loading="prodGantt$.IsLoadingTickets" @click="prodGantt$.LoadLaborKanbanGridItems()">
-      Load Production Data
+    <n-alert v-else-if="!prodGantt$.LaborKanbanGridItems" type="info" title="No Data">
+      Click the button below to load production gantt data for the selected {{ prodGantt$.SelectedProjectNumbers.length
+      }} project(s).
+    </n-alert>
+
+    <n-button type="primary" :loading="prodGantt$.IsLoadingTickets"
+      :disabled="prodGantt$.SelectedProjectNumbers.length === 0" @click="prodGantt$.LoadLaborKanbanGridItems()">
+      Load Production Data ({{ prodGantt$.SelectedProjectNumbers.length }} projects)
     </n-button>
 
     <div v-if="prodGantt$.LaborKanbanGridItems">
@@ -79,9 +85,20 @@ interface GroupedProject {
 const groupedByProject = computed<GroupedProject[]>(() => {
   if (!prodGantt$.LaborKanbanGridItems?.Items) return [];
 
+  // Get selected project numbers from prod-gantt state
+  const selectedProjectNumbers = new Set(prodGantt$.SelectedProjectNumbers);
+
+  // If no projects are selected, show nothing (user needs to pick projects first)
+  if (selectedProjectNumbers.size === 0) return [];
+
   const projectMap = new Map<string, GroupedProject>();
 
   prodGantt$.LaborKanbanGridItems.Items.forEach(item => {
+    // Filter: only include items from selected projects
+    if (!selectedProjectNumbers.has(item.ProjectNumber)) {
+      return; // Skip this item
+    }
+
     const projectKey = `${item.ProjectNumber}`;
 
     if (!projectMap.has(projectKey)) {
