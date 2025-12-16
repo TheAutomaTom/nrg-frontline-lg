@@ -108,9 +108,8 @@ const groupedByProject = computed<GroupedProject[]>(() => {
       project.workOrders.push(workOrder);
     }
 
-    // Find the workflow step for this labor item
-    const workflowSteps = getWorkflowStepsForWorkOrder(item);
-    const matchingStep = workflowSteps ? findStepForLaborItem(item, workflowSteps) : null;
+    // Find the workflow step for this labor item by searching all workflows
+    const matchingStep = findStepForLaborItem(item);
 
     const stepName = matchingStep ? matchingStep.Name : 'Unassigned Labor Items';
     const stepSequence = matchingStep ? matchingStep.Sequence : 9999;
@@ -138,23 +137,22 @@ const groupedByProject = computed<GroupedProject[]>(() => {
   return Array.from(projectMap.values());
 });
 
-function getWorkflowStepsForWorkOrder(item: TicketDto): WorkflowStep[] | undefined {
-  // Find workflow based on work order type and get configured steps
-  const workflow = workflows$.Workflows?.find(w =>
-    w.Name.toLowerCase().includes(item.WorkOrderStepName.toLowerCase())
-  );
+function findStepForLaborItem(item: TicketDto): WorkflowStep | undefined {
+  // Search through all workflows and their steps to find a match by labor item name
+  if (!workflows$.WorkflowStepsMap) return undefined;
 
-  if (workflow && workflows$.WorkflowStepsMap[workflow.Id]) {
-    return workflows$.WorkflowStepsMap[workflow.Id];
+  for (const workflowId in workflows$.WorkflowStepsMap) {
+    const steps = workflows$.WorkflowStepsMap[workflowId];
+    const matchingStep = steps?.find(step =>
+      step.LaborItems?.some((labor: LaborItemDto) => labor.Name === item.LaborItemName)
+    );
+    
+    if (matchingStep) {
+      return matchingStep;
+    }
   }
 
   return undefined;
-}
-
-function findStepForLaborItem(item: TicketDto, workflowSteps: WorkflowStep[]): WorkflowStep | undefined {
-  return workflowSteps.find(step =>
-    step.LaborItems?.some((labor: LaborItemDto) => labor.Name === item.LaborItemName)
-  );
 }
 
 function getWorkOrderTitle(workOrder: GroupedWorkOrder): string {
