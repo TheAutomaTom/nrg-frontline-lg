@@ -146,7 +146,7 @@ function findStepForLaborItem(item: TicketDto): WorkflowStep | undefined {
     const matchingStep = steps?.find(step =>
       step.LaborItems?.some((labor: LaborItemDto) => labor.Name === item.LaborItemName)
     );
-    
+
     if (matchingStep) {
       return matchingStep;
     }
