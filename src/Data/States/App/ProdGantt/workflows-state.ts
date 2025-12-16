@@ -26,10 +26,8 @@ export const useWorkflowsState = defineStore("WorkflowsState", () => {
       "workflows",
     );
     workflows.forEach((workflow) => {
-      if (
-        !WorkflowStepsMap.value[workflow.Id] ||
-        WorkflowStepsMap.value[workflow.Id].length === 0
-      ) {
+      const existingSteps = WorkflowStepsMap.value[workflow.Id];
+      if (!existingSteps || existingSteps.length === 0) {
         console.log(
           "[WorkflowsState] Creating default step for workflow:",
           workflow.Name,

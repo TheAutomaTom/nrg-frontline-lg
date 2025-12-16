@@ -71,7 +71,6 @@ import { ref, computed } from 'vue';
 import { useWorkflowsState } from '@/Data/States/App/ProdGantt/workflows-state';
 import { useLaborsAndOperationsState } from '@/Data/States/App/ProdGantt/labors-state';
 import { generateGuid } from '@/Core/Features/GuidGenerator';
-import type { WorkflowDto } from '@/Core/Models/nrg-dtos/WorkflowDto';
 import type { WorkflowStep } from '@/Core/Models/ProdGantt/WorkflowStep';
 import type { LaborItemDto } from '@/Core/Models/nrg-dtos/LaborItemDto';
 

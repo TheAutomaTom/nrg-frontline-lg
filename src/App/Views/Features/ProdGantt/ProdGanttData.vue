@@ -180,14 +180,14 @@ function formatDuration(duration: string | null): string {
     const timeParts = afterDays.split(':');
     hours = parseInt(timeParts[0] || '0');
     minutes = parseInt(timeParts[1] || '0');
-    const secondsStr = (timeParts[2] || '0').split('.')[0]; // Remove fractional seconds
+    const secondsStr = (timeParts[2] || '0').split('.')[0] || '0'; // Remove fractional seconds
     seconds = parseInt(secondsStr);
   } else {
     // No days: "08:51:31.2123106" or "08:51:31"
     const timeParts = duration.split(':');
     hours = parseInt(timeParts[0] || '0');
     minutes = parseInt(timeParts[1] || '0');
-    const secondsStr = (timeParts[2] || '0').split('.')[0]; // Remove fractional seconds
+    const secondsStr = (timeParts[2] || '0').split('.')[0] || '0'; // Remove fractional seconds
     seconds = parseInt(secondsStr);
   }
 
