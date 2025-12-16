@@ -4,6 +4,7 @@ import DataRefresh from "@/App/Views/Home/DataRefresh.vue";
 import DataBackup from "@/App/Views/Home/DataBackup.vue";
 import ConfigureProdGantt from "@/App/Views/Features/ProdGantt/ConfigureProdGantt.vue";
 import ProdGanttData from "@/App/Views/Features/ProdGantt/ProdGanttData.vue";
+import ConfigTabProjectPicker from "@/App/Views/Features/ProdGantt/ConfigTabs/ConfigTabProjectPicker.vue";
 
 const routes = [
   {
@@ -20,6 +21,11 @@ const routes = [
     path: "/pg-config",
     name: "pg-config",
     component: ConfigureProdGantt,
+  },
+  {
+    path: "/pg-project-picker",
+    name: "pg-project-picker",
+    component: ConfigTabProjectPicker,
   },
   {
     path: "/pg-prod-gantt-data",

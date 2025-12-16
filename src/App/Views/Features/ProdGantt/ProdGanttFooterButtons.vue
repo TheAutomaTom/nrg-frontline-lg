@@ -13,6 +13,11 @@
       <span class="icon">⚙️</span>
       <span class="label hide-on-mobile">Config Workflow</span>
     </n-button>
+    <n-button class="footer-button" :class="{ 'highlight-active': routeName === 'C' }" size="small"
+      @click="goProjectPickerPg" aria-label="Project Picker">
+      <span class="icon">☑️</span>
+      <span class="label hide-on-mobile">Project Picker</span>
+    </n-button>
     <n-button class="footer-button" :class="{ 'highlight-active': routeName === 'pg-prod-gantt-data' }" size="small"
       @click="goProdGanttData" aria-label="Prod Gantt Data">
       <span class="icon">📊</span>
@@ -32,6 +37,7 @@ const routeName = computed(() => route?.name as string | undefined);
 
 const goConfigureProdGantt = () => router.push({ name: 'pg-config' });
 const goProdGanttData = () => router.push({ name: 'pg-prod-gantt-data' });
+const goProjectPickerPg = () => router.push({ name: 'pg-project-picker' });
 </script>
 
 <style scoped>
