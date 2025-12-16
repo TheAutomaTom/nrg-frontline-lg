@@ -164,20 +164,48 @@ function getWorkOrderTitle(workOrder: GroupedWorkOrder): string {
 function formatDuration(duration: string | null): string {
   if (!duration) return 'N/A';
 
-  // Parse duration like "08:51:31.2123106" or "3.06:11:59.2932333"
-  const parts = duration.split('.');
-  if (parts.length === 2 && parts[0]!.includes(':')) {
-    // Format: "d.HH:mm:ss"
-    const days = parseInt(parts[0]!);
-    const time = parts[1]!.split(':');
-    return `${days}d ${time[0]}h ${time[1]}m`;
-  } else if (parts[0]!.includes(':')) {
-    // Format: "HH:mm:ss"
-    const time = parts[0]!.split(':');
-    return `${time[0]}h ${time[1]}m`;
+  let days = 0;
+  let hours = 0;
+  let minutes = 0;
+  let seconds = 0;
+
+  // Parse duration like "08:51:31.2123106" (HH:mm:ss.fffffff) or "3.06:11:59.2932333" (d.HH:mm:ss.fffffff)
+
+  // Check for days format: d.HH:mm:ss (day comes before first colon)
+  const firstColonIndex = duration.indexOf(':');
+  const firstDotIndex = duration.indexOf('.');
+
+  if (firstDotIndex !== -1 && firstDotIndex < firstColonIndex) {
+    // Has days: "3.06:11:59.2932333"
+    days = parseInt(duration.substring(0, firstDotIndex));
+    const afterDays = duration.substring(firstDotIndex + 1);
+    const timeParts = afterDays.split(':');
+    hours = parseInt(timeParts[0] || '0');
+    minutes = parseInt(timeParts[1] || '0');
+    const secondsStr = (timeParts[2] || '0').split('.')[0]; // Remove fractional seconds
+    seconds = parseInt(secondsStr);
+  } else {
+    // No days: "08:51:31.2123106" or "08:51:31"
+    const timeParts = duration.split(':');
+    hours = parseInt(timeParts[0] || '0');
+    minutes = parseInt(timeParts[1] || '0');
+    const secondsStr = (timeParts[2] || '0').split('.')[0]; // Remove fractional seconds
+    seconds = parseInt(secondsStr);
   }
 
-  return duration;
+  // Convert everything to total minutes
+  let totalMinutes = days * 24 * 60 + hours * 60 + minutes;
+
+  // Round up if there are any seconds
+  if (seconds > 0) {
+    totalMinutes += 1;
+  }
+
+  // Convert back to hours and minutes
+  const finalHours = Math.floor(totalMinutes / 60);
+  const finalMinutes = totalMinutes % 60;
+
+  return `${finalHours}h ${finalMinutes}m`;
 }
 
 onMounted(() => {

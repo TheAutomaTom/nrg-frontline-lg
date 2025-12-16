@@ -20,13 +20,20 @@ export const useWorkflowsState = defineStore("WorkflowsState", () => {
   const WorkflowStepsMap = ref<Record<string, WorkflowStep[]>>({});
 
   const initializeWorkflowSteps = (workflows: WorkflowDto[]): void => {
-    console.log('[WorkflowsState] Initializing workflow steps for', workflows.length, 'workflows');
+    console.log(
+      "[WorkflowsState] Initializing workflow steps for",
+      workflows.length,
+      "workflows",
+    );
     workflows.forEach((workflow) => {
       if (
         !WorkflowStepsMap.value[workflow.Id] ||
         WorkflowStepsMap.value[workflow.Id].length === 0
       ) {
-        console.log('[WorkflowsState] Creating default step for workflow:', workflow.Name);
+        console.log(
+          "[WorkflowsState] Creating default step for workflow:",
+          workflow.Name,
+        );
         WorkflowStepsMap.value[workflow.Id] = [
           {
             Id: generateGuid(),
@@ -49,10 +56,14 @@ export const useWorkflowsState = defineStore("WorkflowsState", () => {
       // Load cached workflow steps if they exist
       const cachedSteps = WorkflowStepsCache.load();
       if (cachedSteps) {
-        console.log('[WorkflowsState] Loaded cached workflow steps:', Object.keys(cachedSteps).length, 'workflows');
+        console.log(
+          "[WorkflowsState] Loaded cached workflow steps:",
+          Object.keys(cachedSteps).length,
+          "workflows",
+        );
         WorkflowStepsMap.value = cachedSteps;
       } else {
-        console.log('[WorkflowsState] No cached steps found, initializing...');
+        console.log("[WorkflowsState] No cached steps found, initializing...");
         initializeWorkflowSteps(cached);
       }
 
@@ -67,12 +78,12 @@ export const useWorkflowsState = defineStore("WorkflowsState", () => {
       app$.setAppStatus("error", "Missing API key for workflows.");
       return;
     }
-    
+
     // If we already have workflows loaded from cache, don't reload
     if (Workflows.value && Workflows.value.length > 0) {
       return;
     }
-    
+
     app$.showLoading();
     IsLoadingWorkflows.value = true;
     nrg.SetKey(key);
@@ -110,7 +121,11 @@ export const useWorkflowsState = defineStore("WorkflowsState", () => {
   };
 
   const SaveWorkflowSteps = (): void => {
-    console.log('[WorkflowsState] Saving workflow steps:', Object.keys(WorkflowStepsMap.value).length, 'workflows');
+    console.log(
+      "[WorkflowsState] Saving workflow steps:",
+      Object.keys(WorkflowStepsMap.value).length,
+      "workflows",
+    );
     WorkflowStepsCache.save(WorkflowStepsMap.value);
   };
 
