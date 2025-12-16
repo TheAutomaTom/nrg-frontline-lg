@@ -44,9 +44,9 @@
                 class="step-name-input" @blur="workflows$.SaveWorkflowSteps()" />
               <n-button text type="error"
                 @click="selectedWorkflow && removeStepFromWorkflow(selectedWorkflow.Id, idx)">✕</n-button>
-              <n-select v-model:value="step.LaborItems" multiple filterable placeholder="Select labor items"
+              <n-select :value="getLaborIdArray(step)" multiple filterable placeholder="Select labor items"
                 :options="getFilteredLaborOptions(step.WorkOrderType)" style="min-width: 240px"
-                @update:value="workflows$.SaveWorkflowSteps()" />
+                @update:value="(ids: string[]) => updateStepLaborItems(step, ids)" />
             </n-flex>
           </div>
           <n-text v-if="selectedWorkflowSteps.length === 0" depth="3" class="text-sm italic">
@@ -73,6 +73,7 @@ import { useLaborsAndOperationsState } from '@/Data/States/App/ProdGantt/labors-
 import { generateGuid } from '@/Core/Features/GuidGenerator';
 import type { WorkflowDto } from '@/Core/Models/nrg-dtos/WorkflowDto';
 import type { WorkflowStep } from '@/Core/Models/ProdGantt/WorkflowStep';
+import type { LaborItemDto } from '@/Core/Models/nrg-dtos/LaborItemDto';
 
 const workflows$ = useWorkflowsState();
 const labors$ = useLaborsAndOperationsState();
@@ -102,7 +103,34 @@ const enabledLaborOptions = computed(() => {
 function getFilteredLaborOptions(workOrderType: "Drafting" | "Production" | "Installation") {
   return labors$.AllEnhancedLabors
     .filter(l => l.IsEnabled && l.WorkOrderType === workOrderType)
-    .map(l => ({ label: l.Name, value: l }));
+    .map(l => ({ label: l.Name, value: l.LaborId }));
+}
+
+function getLaborIdArray(step: WorkflowStep): string[] {
+  return step.LaborItems?.map(l => l.LaborId) || [];
+}
+
+function updateStepLaborItems(step: WorkflowStep, laborIds: string[]) {
+  // Convert LaborId array back to LaborItemDto objects (extracting base properties from EnhancedLaborItem)
+  step.LaborItems = laborIds
+    .map(id => {
+      const enhancedLabor = labors$.AllEnhancedLabors.find(l => l.LaborId === id);
+      if (!enhancedLabor) return undefined;
+
+      // Extract only LaborItemDto properties
+      const laborDto: LaborItemDto = {
+        LaborId: enhancedLabor.LaborId,
+        Name: enhancedLabor.Name,
+        Department: enhancedLabor.Department,
+        JobCosting: enhancedLabor.JobCosting,
+        Type: enhancedLabor.Type,
+        WorkOrderType: enhancedLabor.WorkOrderType,
+        HideInKiosk: enhancedLabor.HideInKiosk
+      };
+      return laborDto;
+    })
+    .filter((l): l is LaborItemDto => l !== undefined);
+  workflows$.SaveWorkflowSteps();
 }
 
 function getAllowedTypesForStep(idx: number) {

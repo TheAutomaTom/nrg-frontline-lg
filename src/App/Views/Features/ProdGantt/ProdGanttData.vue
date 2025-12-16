@@ -153,7 +153,7 @@ function getWorkflowStepsForWorkOrder(item: TicketDto): WorkflowStep[] | undefin
 
 function findStepForLaborItem(item: TicketDto, workflowSteps: WorkflowStep[]): WorkflowStep | undefined {
   return workflowSteps.find(step =>
-    step.LaborItems?.some((labor: LaborItemDto) => labor.LaborId === item.LaborId)
+    step.LaborItems?.some((labor: LaborItemDto) => labor.Name === item.LaborItemName)
   );
 }
 
