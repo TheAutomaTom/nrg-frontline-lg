@@ -7,6 +7,10 @@
           Load Projects
         </n-button>
 
+        <n-button type="success" @click="saveSelectedProjects" :disabled="selectedCount === 0">
+          Save Selected ({{ selectedCount }})
+        </n-button>
+
         <n-input v-model:value="searchQuery" placeholder="Search projects..." clearable style="width: 250px;">
           <template #prefix>
             <n-icon>
@@ -33,11 +37,11 @@
         <n-button-group>
           <n-button @click="selectAll" size="small">Select All</n-button>
           <n-button @click="deselectAll" size="small">Deselect All</n-button>
+          <n-button @click="toggleShowSelected" size="small" :type="showOnlySelected ? 'primary' : 'default'">
+            {{ showOnlySelected ? 'Show All' : 'Show Selected' }}
+          </n-button>
         </n-button-group>
 
-        <n-button type="success" @click="saveSelectedProjects" :disabled="selectedCount === 0">
-          Save Selected ({{ selectedCount }})
-        </n-button>
       </n-space>
     </div>
 
@@ -131,6 +135,9 @@ const filterDateValue = ref<number | null>(null);
 // Search query for filtering projects
 const searchQuery = ref('');
 
+// Show only selected projects
+const showOnlySelected = ref(false);
+
 // Disable past dates
 const isDateDisabled = (ts: number): boolean => {
   const today = new Date();
@@ -206,20 +213,32 @@ const deselectAll = (): void => {
   selectedProjects.value.clear();
 };
 
+const toggleShowSelected = (): void => {
+  showOnlySelected.value = !showOnlySelected.value;
+};
+
 const selectedCount = computed(() => selectedProjects.value.size);
 
-// Filter projects by search query (number or name)
+// Filter projects by search query (number or name) and selected filter
 const searchFilteredProjects = computed(() => {
-  const query = searchQuery.value.toLowerCase().trim();
-  if (!query) {
-    return workflows$.FilteredProjectsWithWorkOrders;
+  let filtered = workflows$.FilteredProjectsWithWorkOrders;
+
+  // Apply "show selected" filter first
+  if (showOnlySelected.value) {
+    filtered = filtered.filter(pww => selectedProjects.value.has(pww.project.Number ?? ''));
   }
 
-  return workflows$.FilteredProjectsWithWorkOrders.filter(pww => {
-    const number = pww.project.Number?.toLowerCase() || '';
-    const name = pww.project.Name?.toLowerCase() || '';
-    return number.includes(query) || name.includes(query);
-  });
+  // Apply search query filter
+  const query = searchQuery.value.toLowerCase().trim();
+  if (query) {
+    filtered = filtered.filter(pww => {
+      const number = pww.project.Number?.toLowerCase() || '';
+      const name = pww.project.Name?.toLowerCase() || '';
+      return number.includes(query) || name.includes(query);
+    });
+  }
+
+  return filtered;
 });
 
 onMounted(async () => {

@@ -24,17 +24,38 @@
 
               <!-- Workflow Steps -->
               <n-space vertical :size="16">
-                <n-card v-for="step in workOrder.steps" :key="step.stepName" size="small" :title="step.stepName">
+                <n-card v-for="step in workOrder.steps" :key="step.stepName" size="small">
+                  <template #header>
+                    <n-space vertical :size="4">
+                      <n-text strong>{{ step.stepName }}</n-text>
+                      <n-text v-if="step.stepStartDate && step.stepEndDate" depth="3" style="font-size: 12px;">
+                        Step Window: {{ formatDateTime(step.stepStartDate) }} → {{ formatDateTime(step.stepEndDate) }}
+                      </n-text>
+                    </n-space>
+                  </template>
+
                   <n-list bordered>
-                    <n-list-item v-for="item in step.items" :key="item.LaborId">
+                    <n-list-item v-for="schedItem in step.schedules" :key="schedItem.laborItem.LaborId">
                       <template #prefix>
                         <n-tag :bordered="false" type="info">
-                          {{ item.LaborItemName || "???" }}
+                          {{ schedItem.laborItem.LaborItemName || "???" }}
                         </n-tag>
                       </template>
-                      <n-space :size="12">
-                        <n-text depth="3">Planned: {{ formatDuration(item.LaborPlannedDuration) }}</n-text>
-                        <n-text depth="3">Actual: {{ formatDuration(item.WorkOrderLaborActualDuration) }}</n-text>
+                      <n-space vertical :size="4">
+                        <n-space :size="12">
+                          <n-text depth="3">Duration: {{ formatDuration(schedItem.laborItem.LaborPlannedDuration)
+                          }}</n-text>
+                          <n-text depth="3">Actual: {{ formatDuration(schedItem.laborItem.WorkOrderLaborActualDuration)
+                          }}</n-text>
+                        </n-space>
+                        <n-space :size="8">
+                          <n-tag size="small" type="success">
+                            Start: {{ formatDateTime(schedItem.startDate) }}
+                          </n-tag>
+                          <n-tag size="small" type="error">
+                            End: {{ formatDateTime(schedItem.endDate) }}
+                          </n-tag>
+                        </n-space>
                       </n-space>
                     </n-list-item>
                   </n-list>
@@ -51,126 +72,16 @@
 
 <script setup lang="ts">
 import { computed, onMounted } from 'vue';
-import { useProdGanttState } from '@/Data/States/App/ProdGantt/prod-gantt-state';
+import { useProdGanttState, type GroupedWorkOrder } from '@/Data/States/App/ProdGantt/prod-gantt-state';
 import { useWorkflowsState } from '@/Data/States/App/ProdGantt/workflows-state';
-import type { TicketDto } from '@/Core/Models/nrg-dtos/ProdGantt/Ticket';
-import type { WorkflowStep } from '@/Core/Models/ProdGantt/WorkflowStep';
-import type { LaborItemDto } from '@/Core/Models/nrg-dtos/LaborItemDto';
+import { useWorkWeekState } from '@/Data/States/App/ProdGantt/work-week-state';
 
 const prodGantt$ = useProdGanttState();
 const workflows$ = useWorkflowsState();
+const workWeek$ = useWorkWeekState();
 
-interface GroupedStep {
-  stepName: string;
-  sequence: number;
-  items: TicketDto[];
-}
-
-interface GroupedWorkOrder {
-  workOrderKey: string;
-  workOrderNumber: string;
-  workOrderName: string;
-  workOrderStatus: string;
-  plannedCriticalDate: string;
-  steps: GroupedStep[];
-}
-
-interface GroupedProject {
-  projectKey: string;
-  projectNumber: string;
-  projectName: string;
-  workOrders: GroupedWorkOrder[];
-}
-
-const groupedByProject = computed<GroupedProject[]>(() => {
-  if (!prodGantt$.LaborKanbanGridItems?.Items) return [];
-
-  // Get selected project numbers from prod-gantt state
-  const selectedProjectNumbers = new Set(prodGantt$.SelectedProjectNumbers);
-
-  // If no projects are selected, show nothing (user needs to pick projects first)
-  if (selectedProjectNumbers.size === 0) return [];
-
-  const projectMap = new Map<string, GroupedProject>();
-
-  prodGantt$.LaborKanbanGridItems.Items.forEach(item => {
-    // Filter: only include items from selected projects
-    if (!selectedProjectNumbers.has(item.ProjectNumber)) {
-      return; // Skip this item
-    }
-
-    const projectKey = `${item.ProjectNumber}`;
-
-    if (!projectMap.has(projectKey)) {
-      projectMap.set(projectKey, {
-        projectKey,
-        projectNumber: item.ProjectNumber,
-        projectName: item.ProjectName,
-        workOrders: []
-      });
-    }
-
-    const project = projectMap.get(projectKey)!;
-    let workOrder = project.workOrders.find(wo => wo.workOrderNumber === item.WorkOrderNumber);
-
-    if (!workOrder) {
-      workOrder = {
-        workOrderKey: item.WorkOrderNumber,
-        workOrderNumber: item.WorkOrderNumber,
-        workOrderName: item.WorkOrderName,
-        workOrderStatus: item.WorkOrderStatus,
-        plannedCriticalDate: item.PlannedCriticalDate,
-        steps: []
-      };
-      project.workOrders.push(workOrder);
-    }
-
-    // Find the workflow step for this labor item by searching all workflows
-    const matchingStep = findStepForLaborItem(item);
-
-    const stepName = matchingStep ? matchingStep.Name : 'Unassigned Labor Items';
-    const stepSequence = matchingStep ? matchingStep.Sequence : 9999;
-
-    let step = workOrder.steps.find(s => s.stepName === stepName);
-    if (!step) {
-      step = {
-        stepName,
-        sequence: stepSequence,
-        items: []
-      };
-      workOrder.steps.push(step);
-    }
-
-    step.items.push(item);
-  });
-
-  // Sort steps within each work order by sequence
-  projectMap.forEach(project => {
-    project.workOrders.forEach(workOrder => {
-      workOrder.steps.sort((a, b) => a.sequence - b.sequence);
-    });
-  });
-
-  return Array.from(projectMap.values());
-});
-
-function findStepForLaborItem(item: TicketDto): WorkflowStep | undefined {
-  // Search through all workflows and their steps to find a match by labor item name
-  if (!workflows$.WorkflowStepsMap) return undefined;
-
-  for (const workflowId in workflows$.WorkflowStepsMap) {
-    const steps = workflows$.WorkflowStepsMap[workflowId];
-    const matchingStep = steps?.find(step =>
-      step.LaborItems?.some((labor: LaborItemDto) => labor.Name === item.LaborItemName)
-    );
-
-    if (matchingStep) {
-      return matchingStep;
-    }
-  }
-
-  return undefined;
-}
+// Use the computed property from the state
+const groupedByProject = computed(() => prodGantt$.GroupedProjectsWithSchedule);
 
 function getWorkOrderTitle(workOrder: GroupedWorkOrder): string {
   return `${workOrder.workOrderName} (${workOrder.workOrderNumber}) - ${workOrder.workOrderStatus} - Due: ${workOrder.plannedCriticalDate}`;
@@ -223,7 +134,35 @@ function formatDuration(duration: string | null): string {
   return `${finalHours}h ${finalMinutes}m`;
 }
 
+function formatDateTime(date: Date | null): string {
+  if (!date) return 'N/A';
+
+  try {
+    // Format as "Dec 16, 2025 14:30" (military time)
+    const dateStr = date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    });
+
+    const timeStr = date.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false // Military time
+    });
+
+    return `${dateStr} ${timeStr}`;
+  } catch {
+    return date.toString();
+  }
+}
+
 onMounted(() => {
+  // Load work week configuration
+  if (!workWeek$.DefaultWorkWeek) {
+    workWeek$.LoadWorkWeek();
+  }
+
   // Load workflows first if not already loaded
   if (!workflows$.Workflows) {
     workflows$.LoadWorkflows();
