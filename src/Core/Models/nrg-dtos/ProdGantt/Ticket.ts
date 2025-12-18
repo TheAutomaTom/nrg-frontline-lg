@@ -11,7 +11,7 @@ export type DateString = string;
 
 export interface LaborKanbanGridItemsDto {
   CreateDate: string;
-  Items: TicketDto[];
+  Tickets: TicketDto[];
 }
 
 export interface TicketDto {

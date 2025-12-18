@@ -1,17 +1,18 @@
 <template>
   <n-space vertical :size="24">
-    <n-alert v-if="prodGantt$.SelectedProjectNumbers.length === 0" type="warning" title="No Projects Selected">
+    <n-alert v-if="projectPicker$.SelectedProjectNumbers.length === 0" type="warning" title="No Projects Selected">
       Please go to the "Project Picker" tab and select projects before loading production data.
     </n-alert>
 
     <n-alert v-else-if="!prodGantt$.LaborKanbanGridItems" type="info" title="No Data">
-      Click the button below to load production gantt data for the selected {{ prodGantt$.SelectedProjectNumbers.length
+      Click the button below to load production gantt data for the selected {{
+        projectPicker$.SelectedProjectNumbers.length
       }} project(s).
     </n-alert>
 
     <n-button type="primary" :loading="prodGantt$.IsLoadingTickets"
-      :disabled="prodGantt$.SelectedProjectNumbers.length === 0" @click="prodGantt$.LoadLaborKanbanGridItems()">
-      Load Production Data ({{ prodGantt$.SelectedProjectNumbers.length }} projects)
+      :disabled="projectPicker$.SelectedProjectNumbers.length === 0" @click="prodGantt$.LoadLaborKanbanGridItems()">
+      Load Production Data ({{ projectPicker$.SelectedProjectNumbers.length }} projects)
     </n-button>
 
     <div v-if="prodGantt$.LaborKanbanGridItems">
@@ -35,7 +36,7 @@
                   </template>
 
                   <n-list bordered>
-                    <n-list-item v-for="schedItem in step.schedules" :key="schedItem.laborItem.LaborId">
+                    <n-list-item v-for="schedItem in step.schedule" :key="schedItem.laborItem.LaborId">
                       <template #prefix>
                         <n-tag :bordered="false" type="info">
                           {{ schedItem.laborItem.LaborItemName || "???" }}
@@ -44,9 +45,9 @@
                       <n-space vertical :size="4">
                         <n-space :size="12">
                           <n-text depth="3">Duration: {{ formatDuration(schedItem.laborItem.LaborPlannedDuration)
-                          }}</n-text>
+                            }}</n-text>
                           <n-text depth="3">Actual: {{ formatDuration(schedItem.laborItem.WorkOrderLaborActualDuration)
-                          }}</n-text>
+                            }}</n-text>
                         </n-space>
                         <n-space :size="8">
                           <n-tag size="small" type="success">
@@ -73,10 +74,12 @@
 <script setup lang="ts">
 import { computed, onMounted } from 'vue';
 import { useProdGanttState, type GroupedWorkOrder } from '@/Data/States/App/ProdGantt/prod-gantt-state';
+import { useProjectPickerState } from '@/Data/States/App/ProdGantt/project-picker-state';
 import { useWorkflowsState } from '@/Data/States/App/ProdGantt/workflows-state';
 import { useWorkWeekState } from '@/Data/States/App/ProdGantt/work-week-state';
 
 const prodGantt$ = useProdGanttState();
+const projectPicker$ = useProjectPickerState();
 const workflows$ = useWorkflowsState();
 const workWeek$ = useWorkWeekState();
 

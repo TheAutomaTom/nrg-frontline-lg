@@ -121,10 +121,10 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
 import { useWorkflowsState } from '@/Data/States/App/ProdGantt/workflows-state';
-import { useProdGanttState } from '@/Data/States/App/ProdGantt/prod-gantt-state';
+import { useProjectPickerState } from '@/Data/States/App/ProdGantt/project-picker-state';
 
 const workflows$ = useWorkflowsState();
-const prodGantt$ = useProdGanttState();
+const projectPicker$ = useProjectPickerState();
 
 // Local state for checkboxes (stores project numbers)
 const selectedProjects = ref<Set<string>>(new Set());
@@ -198,7 +198,7 @@ const toggleProjectSelection = (projectNumber: string): void => {
 
 const saveSelectedProjects = (): void => {
   const projectNumbers = Array.from(selectedProjects.value);
-  prodGantt$.SaveSelectedProjects(projectNumbers);
+  projectPicker$.SaveSelectedProjects(projectNumbers);
 };
 
 const selectAll = (): void => {
@@ -247,8 +247,8 @@ onMounted(async () => {
     await workflows$.LoadProjectsWithWorkOrders();
   }
 
-  // Load previously selected project numbers
-  prodGantt$.SelectedProjectNumbers.forEach(number => {
+  // Load previously selected project numbers from project picker state
+  projectPicker$.SelectedProjectNumbers.forEach(number => {
     selectedProjects.value.add(number);
   });
 });

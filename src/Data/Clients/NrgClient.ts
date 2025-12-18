@@ -224,8 +224,10 @@ export class NrgClient implements INrgClient {
   }
 
   async GetWorkOrdersByProjectNumber(
+    key: string,
     projectNumber: string,
   ): Promise<WorkOrderDto[]> {
+    this.key = key;
     const res = await this.get(`/api/projects/${projectNumber}/workorders`);
     if (res.ok) {
       const data = (await res.json()) as WorkOrdersDtosChunked;
