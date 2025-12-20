@@ -15,6 +15,7 @@ import { WeekDay } from "@/Core/Models/ProdGantt/WeekDay";
 import type { WorkWeek } from "@/Core/Models/ProdGantt/WorkWeek";
 import type { ProjectDto } from "@/Core/Models/nrg-dtos/Project/ProjectDto";
 import type { WorkOrderDto } from "@/Core/Models/nrg-dtos/WorkOrderDto";
+import { useProjectPickerState } from "./project-picker-state";
 
 export interface ProductionSchedule {
   Projects: PgProject[];
@@ -181,6 +182,7 @@ export const useProdGanttState = defineStore("ProdGanttState", () => {
   const config$ = useUserConfigState();
   const workflows$ = useWorkflowsState();
   const workWeek$ = useWorkWeekState();
+  const projectPicker$ = useProjectPickerState();
   const nrg = app$.NrgClient ?? new NrgClient();
 
   const ProductionSchedule = ref<ProductionSchedule | null>(null);
@@ -195,20 +197,17 @@ export const useProdGanttState = defineStore("ProdGanttState", () => {
     */
   }
 
-  const DefainProductionSchedule = (): ProductionSchedule => {
+  const DefineProductionSchedule = (): ProductionSchedule => {
     const schedule: ProductionSchedule = {
       WorkWeek: defineWorkWeek(workWeek$?.DefaultWorkWeek || null),
     } as ProductionSchedule;
+
+    //
+    //
+    // return schedule;
   };
 
-  const RefreshProjectDtos = async (): Promise<ProjectDto[]> => {
-    const key = (config$.Key ?? "").trim();
-    const dtos = await nrg.GetProjects(key);
-
-    return dtos;
-  };
-
-  const RefreshProjectsAndWorkOrders = async (
+  const refreshProjectWorkOrders = async (
     projectNumber: string,
   ): Promise<WorkOrderDto[]> => {
     const key = (config$.Key ?? "").trim();
@@ -216,130 +215,193 @@ export const useProdGanttState = defineStore("ProdGanttState", () => {
     return dtos;
   };
 
-  const getLaborKanbanGridItems = async (): Promise<void> => {
-    const key = (config$.Key ?? "").trim();
-    if (!key) {
-      app$.setAppStatus(
-        "error",
-        "Missing API key for labor kanban grid items.",
-      );
-      return;
-    }
+  //============================================
 
-    // Check if we have selected projects
-    if (SelectedProjectNumbers.value.length === 0) {
-      app$.setAppStatus(
-        "error",
-        "No projects selected. Please select projects first.",
-      );
-      return;
-    }
-
-    app$.showLoading();
-    IsLoadingTickets.value = true;
-    nrg.SetKey(key);
-
-    try {
-      console.log(
-        `[ProdGanttState] Loading data for ${SelectedProjectNumbers.value.length} selected projects...`,
-      );
-
-      // Load data for each selected project individually
-      const promises = SelectedProjectNumbers.value.map((projectNumber) =>
-        nrg.GetLaborKanbanGridItemsByProjectNumber(projectNumber),
-      );
-
-      const results = await Promise.all(promises);
-
-      // Merge all results into a single LaborKanbanGridItemsDto
-      const mergedItems = results.flatMap((result) => result.Tickets || []);
-
-      LaborKanbanGridItems.value = {
-        CreateDate: new Date().toISOString(),
-        Tickets: mergedItems,
-      };
-
-      app$.setAppStatus(
-        "success",
-        `Loaded ${mergedItems.length} labor items from ${SelectedProjectNumbers.value.length} project(s).`,
-      );
-    } catch (err) {
-      const message =
-        (err as Error)?.message ||
-        (typeof err === "string" ? err : "Unknown error");
-      app$.setAppStatus("error", `Labor kanban grid items failed: ${message}`);
-    } finally {
-      IsLoadingTickets.value = false;
-      app$.hideLoading();
-    }
-  };
-
-  const collatePgProjectsAndWorkOrders = async (): Promise<PgProject[]> => {
-    const pgProjects: PgProject[] = [];
-
-    const projectDtos = await RefreshProjectDtos();
-
-    projectDtos.forEach((projDto) => {
-      const pgProject: PgProject = {
-        Id: projDto.Id,
-        Number: projDto.Number || null,
-        Name: projDto.Name || null,
-        EndDate: new Date(0),
+  const findUniqueProjectNumbers = (tickets: TicketDto[]): PgProject[] => {
+    const seen = new Set<string>();
+    return tickets
+      .filter((ticket) => {
+        if (!ticket.ProjectNumber) return false; // guard if nullable
+        if (seen.has(ticket.ProjectNumber)) return false;
+        seen.add(ticket.ProjectNumber);
+        return true;
+      })
+      .map((dto) => ({
+        Id: dto.ProjectId,
+        Number: dto.ProjectNumber ?? null,
+        Name: dto.ProjectName ?? null,
+        EndDate: new Date(), // TODO: set to latest PlannedCriticalDate
         WOs: [],
-      };
-      pgProjects.push(pgProject);
-    });
-
-    pgProjects.forEach(async (pgProject) => {
-      if (!pgProject.Number) return;
-      pgProject.WOs = [];
-
-      const workOrderDtos = await RefreshProjectsAndWorkOrders(
-        pgProject.Number,
-      );
-      workOrderDtos.forEach(async (woDto) => {
-        const pgWorkOrder: PgWorkOrder = {
-          ProjectNumber: woDto.ProjectNumber,
-          ProjectName: woDto.ProjectName,
-          Id: woDto.Id,
-          Number: woDto.Number,
-          Name: woDto.Name,
-          Type: woDto.Type,
-          Status: woDto.Status,
-          PgTickets: [],
-          PlannedCriticalDate: woDto.PlannedCriticalDate,
-        };
-        pgProject.WOs.push(pgWorkOrder);
-
-        // Update Project EndDate based on WOs
-        if (woDto.PlannedCriticalDate) {
-          const woEndDate = new Date(woDto.PlannedCriticalDate);
-          if (woEndDate > pgProject.EndDate) {
-            pgProject.EndDate = woEndDate;
-          }
-        }
-      });
-    });
-
-    return pgProjects;
+      }));
   };
+
+  const createProjectsWithWorkOrdersAndTickets = (
+    tickets: TicketDto[],
+  ): PgProject[] => {
+    const projectMap = new Map<string, PgProject>();
+
+    tickets.forEach((ticket) => {
+      if (!ticket.ProjectNumber) return;
+
+      // Get or create project
+      let project = projectMap.get(ticket.ProjectNumber);
+      if (!project) {
+        project = {
+          Id: ticket.ProjectId,
+          Number: ticket.ProjectNumber,
+          Name: ticket.ProjectName ?? null,
+          EndDate: new Date(ticket.PlannedCriticalDate), // Use the ticket's critical date as initial
+          WOs: [],
+        };
+        projectMap.set(ticket.ProjectNumber, project);
+      }
+
+      // Update project end date to the latest critical date
+      const ticketCriticalDate = new Date(ticket.PlannedCriticalDate);
+      if (ticketCriticalDate > project.EndDate) {
+        project.EndDate = ticketCriticalDate;
+      }
+
+      // Get or create work order within this project
+      let workOrder = project.WOs.find(
+        (wo) => wo.Number === ticket.WorkOrderNumber,
+      );
+      if (!workOrder) {
+        workOrder = {
+          PgTickets: [],
+          PlannedCriticalDate: ticket.PlannedCriticalDate,
+          ProjectNumber: ticket.ProjectNumber,
+          ProjectName: ticket.ProjectName ?? "",
+          Id: ticket.WorkOrderId,
+          Number: ticket.WorkOrderNumber,
+          Name: ticket.WorkOrderName,
+          Type: "", // TODO: populate from separate WorkOrderDtos call
+          Status: "", // TODO: populate from separate WorkOrderDtos call
+        };
+        project.WOs.push(workOrder);
+      }
+
+      // Create PgTicket from TicketDto
+      const pgTicket: PgTicket = {
+        LaborId: ticket.LaborId,
+        LaborItemName: ticket.LaborItemName,
+        ProjectNumber: ticket.ProjectNumber,
+        ProjectName: ticket.ProjectName ?? "",
+        WorkOrderNumber: ticket.WorkOrderNumber,
+        WorkOrderName: ticket.WorkOrderName,
+        PlannedCriticalDate: ticket.PlannedCriticalDate,
+        ShipmentDate: ticket.ShipmentDate,
+        LaborPlannedDuration: ticket.LaborPlannedDuration,
+        ActivityLogUsers: ticket.ActivityLogUsers,
+      };
+
+      workOrder.PgTickets.push(pgTicket);
+    });
+
+    return Array.from(projectMap.values());
+  };
+
+  //============================================
+
+  const collatePgProjectsAndWorkOrdersandLabor = async (): Promise<
+    PgProject[]
+  > => {
+    // Get all tickets for selected projects
+    const allTickets: TicketDto[] = [];
+
+    for (const projNum of projectPicker$.SelectedProjectNumbers) {
+      const ticketDtos =
+        await nrg.GetLaborKanbanGridItemsByProjectNumber(projNum);
+      if (ticketDtos.Tickets) {
+        allTickets.push(...ticketDtos.Tickets);
+      }
+    }
+    // Use the helper function to create projects with work orders and tickets
+    return createProjectsWithWorkOrdersAndTickets(allTickets);
+  };
+
+  const getLaborKanbanGridItems =
+    async (): Promise<LaborKanbanGridItemsDto | null> => {
+      const key = (config$.Key ?? "").trim();
+      if (!key) {
+        app$.setAppStatus(
+          "error",
+          "Missing API key for labor kanban grid items.",
+        );
+        return null;
+      }
+
+      // Check if we have selected projects
+      if (projectPicker$.SelectedProjectNumbers.length === 0) {
+        app$.setAppStatus(
+          "error",
+          "No projects selected. Please select projects first.",
+        );
+        return null;
+      }
+
+      app$.showLoading();
+      // IsLoadingTickets.value = true;
+      nrg.SetKey(key);
+
+      try {
+        console.log(
+          `[ProdGanttState] Loading data for ${projectPicker$.SelectedProjectNumbers.length} selected projects...`,
+        );
+
+        // Load data for each selected project individually
+        const promises = projectPicker$.SelectedProjectNumbers.map(
+          (projectNumber) =>
+            nrg.GetLaborKanbanGridItemsByProjectNumber(projectNumber),
+        );
+
+        const results = await Promise.all(promises);
+
+        // Merge all results into a single LaborKanbanGridItemsDto
+        const mergedItems = results.flatMap((result) => result.Tickets || []);
+
+        const LaborKanbanGridItems = {
+          CreateDate: new Date().toISOString(),
+          Tickets: mergedItems,
+        } as LaborKanbanGridItemsDto;
+
+        app$.setAppStatus(
+          "success",
+          `Loaded ${mergedItems.length} labor items from ${projectPicker$.SelectedProjectNumbers.length} project(s).`,
+        );
+        return LaborKanbanGridItems;
+      } catch (err) {
+        const message =
+          (err as Error)?.message ||
+          (typeof err === "string" ? err : "Unknown error");
+        app$.setAppStatus(
+          "error",
+          `Labor kanban grid items failed: ${message}`,
+        );
+      } finally {
+        // IsLoadingTickets.value = false;
+        app$.hideLoading();
+      }
+      return null;
+    };
 
   const defineWorkWeek = (defaultWorkWeek: WorkWeek | null): WorkDay[] => {
-    const workDays: WorkDay[] = [];
-    if (defaultWorkWeek) {
-      const startHour = parseTimeToHours(defaultWorkWeek.StartOfDay);
-      const endHour = startHour + defaultWorkWeek!.HoursPerDay;
-      const lengthAsMinutes = defaultWorkWeek!.HoursPerDay * 60;
+    if (!defaultWorkWeek) return [];
 
-      const monday = {
+    const startHour = parseTimeToHours(defaultWorkWeek.StartOfDay);
+    const endHour = startHour + defaultWorkWeek!.HoursPerDay;
+    const lengthAsMinutes = defaultWorkWeek!.HoursPerDay * 60;
+
+    const workDays: WorkDay[] = [
+      {
         Sequence: 1,
         Name: "Monday",
         StartHour: startHour,
         EndHour: endHour,
         LengthAsMinutes: lengthAsMinutes,
         IsEnabled: defaultWorkWeek.WorkingDays.Typical.includes(WeekDay.Monday),
-      } as WorkDay;
-      const tuesday = {
+      } as WorkDay,
+      {
         Sequence: 2,
         Name: "Tuesday",
         StartHour: startHour,
@@ -348,8 +410,8 @@ export const useProdGanttState = defineStore("ProdGanttState", () => {
         IsEnabled: defaultWorkWeek.WorkingDays.Typical.includes(
           WeekDay.Tuesday,
         ),
-      } as WorkDay;
-      const wednesday = {
+      } as WorkDay,
+      {
         Sequence: 3,
         Name: "Wednesday",
         StartHour: startHour,
@@ -358,8 +420,8 @@ export const useProdGanttState = defineStore("ProdGanttState", () => {
         IsEnabled: defaultWorkWeek.WorkingDays.Typical.includes(
           WeekDay.Wednesday,
         ),
-      } as WorkDay;
-      const thursday = {
+      } as WorkDay,
+      {
         Sequence: 4,
         Name: "Thursday",
         StartHour: startHour,
@@ -368,16 +430,16 @@ export const useProdGanttState = defineStore("ProdGanttState", () => {
         IsEnabled: defaultWorkWeek.WorkingDays.Typical.includes(
           WeekDay.Thursday,
         ),
-      } as WorkDay;
-      const friday = {
+      } as WorkDay,
+      {
         Sequence: 5,
         Name: "Friday",
         StartHour: startHour,
         EndHour: endHour,
         LengthAsMinutes: lengthAsMinutes,
         IsEnabled: defaultWorkWeek.WorkingDays.Typical.includes(WeekDay.Friday),
-      } as WorkDay;
-      const saturday = {
+      } as WorkDay,
+      {
         Sequence: 6,
         Name: "Saturday",
         StartHour: startHour,
@@ -386,18 +448,24 @@ export const useProdGanttState = defineStore("ProdGanttState", () => {
         IsEnabled: defaultWorkWeek.WorkingDays.Typical.includes(
           WeekDay.Saturday,
         ),
-      } as WorkDay;
-      const sunday = {
+      } as WorkDay,
+      {
         Sequence: 7,
         Name: "Sunday",
         StartHour: startHour,
         EndHour: endHour,
         LengthAsMinutes: lengthAsMinutes,
         IsEnabled: defaultWorkWeek.WorkingDays.Typical.includes(WeekDay.Sunday),
-      } as WorkDay;
-    }
+      } as WorkDay,
+    ];
+
     return workDays;
   };
 
-  return { ProductionSchedule };
+  //=====================================================================
+  return {
+    ProductionSchedule,
+    getProjectsWithWorkOrders: createProjectsWithWorkOrdersAndTickets,
+    collatePgProjectsAndWorkOrdersandLabor,
+  };
 });

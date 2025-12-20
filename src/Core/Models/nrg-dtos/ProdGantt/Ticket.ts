@@ -20,10 +20,10 @@ export interface TicketDto {
   // LaborItemStepName: string;
   // LaborItemStepNumber: number;
   // LaborNotes: string | null;
-  // ProjectId: string;
+  ProjectId: string;
   ProjectNumber: string;
   ProjectName: string;
-  // WorkOrderId: string;
+  WorkOrderId: string;
   WorkOrderNumber: string;
   WorkOrderName: string;
   WorkOrderStepName: string;
